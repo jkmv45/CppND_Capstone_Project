@@ -1,1 +1,11 @@
 .github/**
+.vscode/**
+build/**
+test/_deps/**
+test/bin/**
+test/lib/**
+test/CMakeFiles/**
+test/CMakeCache.txt
+test/Makefile
+test/*.cmake*
+

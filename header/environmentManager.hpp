@@ -4,12 +4,14 @@
 #include "eigen3/Eigen/Geometry"
 #include "swarmAgent.hpp"
 
+class swarmAgent;
+
 class environmentManager{
     public:
     // Attributes
 
     // Methods
-    Eigen::MatrixXd computeLaplacian();
+    Eigen::VectorX<swarmAgent*> getNeighborhood();
 
     private:
     // Attributes
@@ -17,4 +19,5 @@ class environmentManager{
     Eigen::VectorX<swarmAgent*> agentList;
 
     // Methods
+    Eigen::MatrixXd computeLaplacian();
 };

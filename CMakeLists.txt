@@ -7,4 +7,10 @@ set(CMAKE_CXX_FLAGS, "${CXX_FLAGS}")
 
 project(SwarmSimulation)
 
-add_executable(SwarmSimulation src/main.cpp)
+include_directories(header)
+
+add_executable(SwarmSimulation 
+    src/main.cpp
+    src/swarmAgent.cpp
+    header/swarmAgent.hpp
+)
