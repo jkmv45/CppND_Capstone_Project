@@ -1,23 +1,31 @@
 #pragma once
 
 #include <cmath>
+#include <memory>
+#include <vector>
+
 #include "eigen3/Eigen/Geometry"
+
+#include "SimObjABC.hpp"
 #include "swarmAgent.hpp"
 
-class swarmAgent;
-
-class environmentManager{
+class EnvironmentManager : public SimObj {
     public:
     // Attributes
 
     // Methods
-    Eigen::VectorX<swarmAgent*> getNeighborhood();
+    void Simulate();
+    std::vector<SwarmAgent*> GetNeighborhood();
+
+    // Constructor
+    EnvironmentManager(){};
+    EnvironmentManager(std::vector<SwarmAgent*>);
 
     private:
     // Attributes
     Eigen::MatrixXd laplacian;
-    Eigen::VectorX<swarmAgent*> agentList;
+    std::vector<SwarmAgent*> agentList;
 
     // Methods
-    Eigen::MatrixXd computeLaplacian();
+    Eigen::MatrixXd ComputeLaplacian();
 };

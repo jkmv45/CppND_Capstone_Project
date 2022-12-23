@@ -5,11 +5,8 @@
 
 #include "eigen3/Eigen/Geometry"
 
-#include "environmentManager.hpp"
+#include "SimObjABC.hpp"
 #include "sensor.hpp"
-
-class environmentManager;
-class sensor;
 
 struct VehicleParams{
     // Scalars
@@ -44,46 +41,46 @@ struct ControlParams{
     }
 };
 
-enum agentRole {leader,follower};
+enum AgentRole {leader,follower};
 
-class swarmAgent{
+class SwarmAgent : public SimObj {
     public:
     // Attributes
     double dt;          // Sample Time [s]
-    agentRole myRole;   // This agents role in the swarm (leader or follower) 
+    AgentRole myRole;   // This agents role in the swarm (leader or follower) 
 
     // Constructor
     // swarmAgent(agentRole role, double tstep) : myRole(role), dt(tstep) {}
-    swarmAgent(agentRole role, double tstep, std::shared_ptr<environmentManager> env);
+    SwarmAgent(){};
+    SwarmAgent(AgentRole role, double tstep);
 
     // Methods
     void Simulate();
-    Eigen::Matrix4d getCurrentPose();
-    Eigen::Vector3d getCurrentAngVel();
-    double getCurrentSpeed();
+    // Eigen::Matrix4d GetCurrentPose();
+    // Eigen::Vector3d GetCurrentAngVel();
+    // double GetCurrentSpeed();
 
     private:
     // Attributes
-    // Pointers
-    std::unique_ptr<sensor> mySensorPtr;
-    std::shared_ptr<environmentManager> myEnvPtr;
+    // Objects
+    Sensor sensor;
     // Structs
     VehicleParams vehParams;
     ControlParams ctrlParams;
     // Vectors
     Eigen::Vector4d inputU;     // Control input vector for agent controller
-    Eigen::Vector3d tanVecT;    // Unit vector indicating forward direction along path
-    Eigen::Vector3d normVecN;   // Unit vector indicating normal direction along path
-    Eigen::Vector3d bnormVecB;  // Unit vector creating right hand system with tanVecT and normVecN (i.e. T x N)
-    Eigen::Vector3d posVecR;    // Current position of agent [m]
-    Eigen::Vector3d angVel;     // Current angular velocity of agent [rad/s]
+    // Eigen::Vector3d tanVecT;    // Unit vector indicating forward direction along path
+    // Eigen::Vector3d normVecN;   // Unit vector indicating normal direction along path
+    // Eigen::Vector3d bnormVecB;  // Unit vector creating right hand system with tanVecT and normVecN (i.e. T x N)
+    // Eigen::Vector3d posVecR;    // Current position of agent [m]
+    // Eigen::Vector3d angVel;     // Current angular velocity of agent [rad/s]
     // Scalars
-    double fwdSpd;              // Current forward speed of agent [m/s]
+    // double fwdSpd;              // Current forward speed of agent [m/s]
 
     // Methods
-    Eigen::Matrix4d senseNeighborPose(swarmAgent* neighbor);
-    Eigen::Vector4d senseNeighborVel(swarmAgent* neighbor);
-    Eigen::Vector4d computeControlInputs();
-    void propagateStates();
-    double computeAPF(double);
+    // Eigen::Matrix4d senseNeighborPose(swarmAgent* neighbor);
+    // Eigen::Vector4d senseNeighborVel(swarmAgent* neighbor);
+    Eigen::Vector4d ComputeControlInputs();
+    void PropagateStates();
+    double ComputeAPF(double);
 };

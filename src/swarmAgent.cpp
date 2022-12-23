@@ -1,65 +1,64 @@
 #include "swarmAgent.hpp"
 
 // Constructor
-swarmAgent::swarmAgent(agentRole role, double tstep, std::shared_ptr<environmentManager> env){
-    myRole = role;
-    dt = tstep;
-    myEnvPtr = env;
+SwarmAgent::SwarmAgent(AgentRole role, double tstep){
+    this -> myRole = role;
+    this -> dt = tstep;
     // Initialize Private Variables
-    inputU = {0, 0, 0, 0};
-    tanVecT = {1, 0, 0};
-    normVecN = {0, 1, 0};
-    bnormVecB = {0, 0, 1};
-    posVecR = {0, 0, 0};
-    angVel = {0, 0, 0};
-    fwdSpd = 0;
-    mySensorPtr = std::make_unique<sensor>(this,env,vehParams.senseRadius);
+    // this -> inputU = {0, 0, 0, 0};
+    // this -> tanVecT = {1, 0, 0};
+    // this -> normVecN = {0, 1, 0};
+    // this -> bnormVecB = {0, 0, 1};
+    // this -> posVecR = {0, 0, 0};
+    // this -> angVel = {0, 0, 0};
+    // this -> fwdSpd = 0;
+    this -> sensor = Sensor(vehParams.senseRadius);
 }
 
 // Public Methods
-void swarmAgent::Simulate(){
+void SwarmAgent::Simulate(){
 
 }
 
 // Getters
-Eigen::Matrix4d swarmAgent::getCurrentPose(){
-    Eigen::Matrix4d pose = Eigen::Matrix4d::Identity();
-    Eigen::Matrix3d rotm;
-    rotm << tanVecT, normVecN, bnormVecB;
-    pose.topLeftCorner(3,3) = rotm;
-    pose.block<3,1>(0,3) << posVecR.x(), posVecR.y(), posVecR.z();
-    return pose;
-}
+// Eigen::Matrix4d SwarmAgent::GetCurrentPose(){
+//     Eigen::Matrix4d pose = Eigen::Matrix4d::Identity();
+//     Eigen::Matrix3d rotm;
+//     rotm << tanVecT, normVecN, bnormVecB;
+//     pose.topLeftCorner(3,3) = rotm;
+//     pose.block<3,1>(0,3) << posVecR.x(), posVecR.y(), posVecR.z();
+//     return pose;
+// }
 
-Eigen::Vector3d swarmAgent::getCurrentAngVel(){
-    return angVel;
-}
+// Eigen::Vector3d SwarmAgent::GetCurrentAngVel(){
+//     return angVel;
+// }
 
-double swarmAgent::getCurrentSpeed(){
-    return fwdSpd;
-}
+// double SwarmAgent::GetCurrentSpeed(){
+//     return fwdSpd;
+// }
 
 // Private Methods
-Eigen::Matrix4d swarmAgent::senseNeighborPose(swarmAgent* neighbor){
-    return neighbor->getCurrentPose();
-}
+// Eigen::Matrix4d SwarmAgent::SenseNeighborPose(SwarmAgent* neighbor){
+//     return neighbor->GetCurrentPose();
+// }
 
-Eigen::Vector4d swarmAgent::senseNeighborVel(swarmAgent* neighbor){
-    Eigen::Vector4d vvec;
-    vvec[0] = neighbor->getCurrentSpeed();
-    vvec.block<1,3>(0,1) << neighbor->getCurrentAngVel();
-    return vvec;
-}
+// Eigen::Vector4d SwarmAgent::SenseNeighborVel(SwarmAgent* neighbor){
+//     Eigen::Vector4d vvec;
+//     vvec[0] = neighbor->GetCurrentSpeed();
+//     vvec.block<1,3>(0,1) << neighbor->GetCurrentAngVel();
+//     return vvec;
+// }
 
-Eigen::Vector4d swarmAgent::computeControlInputs(){
+Eigen::Vector4d SwarmAgent::ComputeControlInputs(){
     Eigen::Vector4d u = Eigen::Vector4d::Zero();
     return u;
 }
 
-void swarmAgent::propagateStates(){
+void SwarmAgent::PropagateStates(){
 
 }
 
-double swarmAgent::computeAPF(double rrel){
+double SwarmAgent::ComputeAPF(double rrel){
     return rrel;
 }

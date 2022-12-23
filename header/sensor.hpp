@@ -1,34 +1,35 @@
 #pragma once
 
+#include <vector>
 #include <memory>
 
-#include "environmentManager.hpp"
-#include "swarmAgent.hpp"
+#include "eigen3/Eigen/Geometry"
 
-class swarmAgent;
-class environmentManager;
+#include "SimObjABC.hpp"
 
-class sensor {
+class Sensor {
     public:
     // Attributes
     bool noTargetInRange;
     bool newDataAvailable;
 
     // Methods
-    void samplePoseSensor();
-    void sampleRateSensor();
-    std::vector<Eigen::Matrix4d> getPoseData();
-    std::vector<Eigen::Vector4d> getRateData();
+    void SetDetectedObjects(std::vector<SimObj*>);
+    void SamplePoseSensor();
+    void SampleRateSensor();
+    std::vector<Eigen::Matrix4d> GetPoseData(){ return poseData; };
+    std::vector<Eigen::Vector4d> GetRateData(){ return rateData; };
+    std::vector<SimObj*> GetDetectedObjects(){ return objDet; };
 
-    // Eigen::Matrix4d senseNeighborPose(swarmAgent* neighbor);
-    // Eigen::Vector4d senseNeighborVel(swarmAgent* neighbor);
+    // Eigen::Matrix4d SenseNeighborPose(SwarmAgent* neighbor);
+    // Eigen::Vector4d SenseNeighborVel(SwarmAgent* neighbor);
 
     // Constructor
-    sensor(swarmAgent*, std::shared_ptr<environmentManager>, double);
+    Sensor(){};
+    Sensor(double);
 
     private:
-    swarmAgent* owner;
-    std::shared_ptr<environmentManager> _env;
+    std::vector<SimObj*> objDet;
     std::vector<Eigen::Matrix4d> poseData;
     std::vector<Eigen::Vector4d> rateData;
     double sensRange;
