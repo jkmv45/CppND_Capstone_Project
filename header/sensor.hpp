@@ -1,5 +1,6 @@
 #pragma once
 
+#include <iostream>
 #include <vector>
 #include <memory>
 
@@ -14,12 +15,13 @@ class Sensor {
     bool newDataAvailable;
 
     // Methods
-    void SetDetectedObjects(std::vector<SimObj*>);
+    void SetDetectedObjects(std::vector<std::shared_ptr<SimObj>>);
     void SamplePoseSensor();
     void SampleRateSensor();
     std::vector<Eigen::Matrix4d> GetPoseData(){ return poseData; };
     std::vector<Eigen::Vector4d> GetRateData(){ return rateData; };
-    std::vector<SimObj*> GetDetectedObjects(){ return objDet; };
+    std::vector<std::shared_ptr<SimObj>> GetDetectedObjects(){ return objDet; };
+    double GetSensorRange(){ return sensRange; };
 
     // Eigen::Matrix4d SenseNeighborPose(SwarmAgent* neighbor);
     // Eigen::Vector4d SenseNeighborVel(SwarmAgent* neighbor);
@@ -29,7 +31,7 @@ class Sensor {
     Sensor(double);
 
     private:
-    std::vector<SimObj*> objDet;
+    std::vector<std::shared_ptr<SimObj>> objDet;
     std::vector<Eigen::Matrix4d> poseData;
     std::vector<Eigen::Vector4d> rateData;
     double sensRange;

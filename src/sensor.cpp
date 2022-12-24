@@ -7,33 +7,26 @@ Sensor::Sensor(double range){
     this -> rateData.assign(1,Eigen::Vector4d::Zero());
 }
 
-void Sensor::SetDetectedObjects(std::vector<SimObj*> objInRange){
+void Sensor::SetDetectedObjects(std::vector<std::shared_ptr<SimObj>> objInRange){
     newDataAvailable = (objDet != objInRange);
+    objDet.clear();
     objDet = objInRange;
     noTargetInRange = (objInRange.size() == 0);
 }
 
 void Sensor::SamplePoseSensor(){
-    poseData.resize(objDet.size());
-    for (SimObj* obj : objDet){
+    poseData.clear();
+    for (std::shared_ptr<SimObj> obj : objDet){
         poseData.push_back(obj->GetCurrentPose());
     }
 }
 
-// Eigen::Vector4d Sensor::SenseNeighborVel(SwarmAgent* neighbor){
-    // Eigen::Vector4d vvec;
-    // vvec[0] = neighbor->GetCurrentSpeed();
-    // vvec.block<1,3>(0,1) << neighbor->GetCurrentAngVel();
-    // return vvec;
-// }
-
-// Eigen::Matrix4d Sensor::SenseNeighborPose(SwarmAgent* neighbor){
-//     return neighbor->GetCurrentPose();
-// }
-
-// Eigen::Vector4d Sensor::SenseNeighborVel(SwarmAgent* neighbor){
-//     Eigen::Vector4d vvec;
-//     vvec[0] = neighbor->GetCurrentSpeed();
-//     vvec.block<1,3>(0,1) << neighbor->GetCurrentAngVel();
-//     return vvec;
-// }
+void Sensor::SampleRateSensor(){
+    rateData.clear();
+    for (std::shared_ptr<SimObj> obj : objDet){
+        Eigen::Vector4d vvec;
+        vvec[0] = obj->GetCurrentSpeed();
+        vvec.block<3,1>(1,0) << obj->GetCurrentAngVel();
+        rateData.push_back(vvec);
+    }
+}

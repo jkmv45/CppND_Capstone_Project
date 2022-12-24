@@ -6,12 +6,9 @@ SwarmAgent::SwarmAgent(AgentRole role, double tstep){
     this -> dt = tstep;
     // Initialize Private Variables
     // this -> inputU = {0, 0, 0, 0};
-    // this -> tanVecT = {1, 0, 0};
-    // this -> normVecN = {0, 1, 0};
-    // this -> bnormVecB = {0, 0, 1};
-    // this -> posVecR = {0, 0, 0};
-    // this -> angVel = {0, 0, 0};
-    // this -> fwdSpd = 0;
+    this -> pose = Eigen::Matrix4d::Identity();
+    this -> angVel = {0, 0, 0};
+    this -> fwdSpd = 0;
     this -> sensor = Sensor(vehParams.senseRadius);
 }
 
