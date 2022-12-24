@@ -23,9 +23,11 @@ include_directories(../header)
 
 add_executable(SwarmAgentTester
     SwarmAgentTester.cpp
+    ../src/SimObjABC.cpp
     ../src/environmentManager.cpp
     ../src/swarmAgent.cpp
     ../src/sensor.cpp
+    ../header/SimObjABC.hpp
     ../header/swarmAgent.hpp
     ../header/environmentManager.hpp
     ../header/sensor.hpp

@@ -4,7 +4,7 @@
 #include "environmentManager.hpp"
 #include "gtest/gtest.h"
 
-// Test Fixture
+// ***************************************** Test Fixtures ****************************************
 class SwarmAgentTest : public ::testing::Test{
     protected:
     SwarmAgentTest() {
@@ -15,7 +15,7 @@ class SwarmAgentTest : public ::testing::Test{
 
     // void TearDown() override {}
 
-    EnvironmentManager env;
+    // EnvironmentManager env;
     SwarmAgent agent1;
     SwarmAgent agent2;
 };
@@ -25,8 +25,6 @@ class SensorTest : public ::testing::Test{
     SensorTest() {
         double timestep = 0.001;
         double range = 100;
-        // SwarmAgent agent1 = SwarmAgent(AgentRole::leader,timestep);
-        // SwarmAgent agent2 = SwarmAgent(AgentRole::follower,timestep);
         sensedAgents.push_back(std::make_shared<SwarmAgent>(SwarmAgent(AgentRole::leader,timestep)));
         sensedAgents.push_back(std::make_shared<SwarmAgent>(SwarmAgent(AgentRole::leader,timestep)));
         this -> testSensor = Sensor(range);
@@ -38,7 +36,26 @@ class SensorTest : public ::testing::Test{
     std::vector<std::shared_ptr<SimObj>> sensedAgents;
 };
 
-// Test Definitions
+class EnvironmentTest : public ::testing::Test{
+    protected:
+    EnvironmentTest() {
+        double timestep = 0.001;
+        double range = 100;
+        simAgents.push_back(std::make_shared<SwarmAgent>(SwarmAgent(AgentRole::leader,timestep)));
+        simAgents.push_back(std::make_shared<SwarmAgent>(SwarmAgent(AgentRole::follower,timestep)));
+        simAgents.push_back(std::make_shared<SwarmAgent>(SwarmAgent(AgentRole::follower,timestep)));
+        env = EnvironmentManager(simAgents);
+    }
+
+    EnvironmentManager env;
+    std::vector<std::shared_ptr<SwarmAgent>> simAgents;
+};
+
+// *************************************** Test Suite Definitions **************************************
+
+// *****************************************************************************************************
+// ***************************************** Swarm Agent Tests *****************************************
+// *****************************************************************************************************
 TEST_F(SwarmAgentTest,ConstructorTest){
     AgentRole testrole = AgentRole::leader;
     double testval = 0.01;
@@ -62,6 +79,10 @@ TEST_F(SwarmAgentTest,GetSpeed){
     EXPECT_EQ(mySpeed,0);
 }
 
+
+// *****************************************************************************************************
+// ******************************************* Sensor Tests ********************************************
+// *****************************************************************************************************
 TEST_F(SensorTest, ConstructorTest){
     double range = 110;
     Sensor mySensor = Sensor(range);
@@ -114,17 +135,88 @@ TEST_F(SensorTest, PoseRateTest){
     EXPECT_EQ(av2, sensedAgents[1]->GetCurrentAngVel());
 }
 
-// TEST_F(SwarmAgentTest,senseNeighborPoseTest){
-//     Eigen::Matrix4d myNeighborPose = agent1.senseNeighborPose(&agent2);
-//     Eigen::Matrix4d actualPose = agent2.getCurrentPose();
-//     EXPECT_EQ(myNeighborPose,actualPose);
-// }
+// *****************************************************************************************************
+// ***************************************** Environment Tests *****************************************
+// *****************************************************************************************************
+TEST_F(EnvironmentTest, ConstructorTest){
+    EXPECT_EQ(env.numAgents, simAgents.size());
+    EXPECT_EQ(env.GetAgentList(), simAgents);
+}
 
-// TEST_F(SwarmAgentTest,senseNeighborSpeedTest){
-//     Eigen::Vector4d myNeighborVel = agent1.senseNeighborVel(&agent2);
-//     Eigen::Matrix3d actualAngVel = agent2.getCurrentAngVel();
-//     double actualSpeed = agent2.getCurrentSpeed();
-//     Eigen::Vector4d actualVel;
-//     actualVel << actualSpeed, actualAngVel;
-//     EXPECT_EQ(myNeighborVel,actualVel);
-// }
+TEST_F(EnvironmentTest, ConnectedGraphTest){
+    Eigen::Matrix3d rotMat = Eigen::Matrix3d::Identity();
+    Eigen::Vector3d v1 = {1, 2, 3};
+    Eigen::Vector3d v2 = v1;
+    Eigen::Vector3d v3 = v1;
+    v2.x() += 149; // Inside sensing radius
+    v3.x() += 151; // Outside sensing radius
+    Eigen::Matrix4d t1, t2, t3;
+
+    t1.block<3,3>(0,0) = rotMat;
+    t2.block<3,3>(0,0) = rotMat;
+    t3.block<3,3>(0,0) = rotMat;
+
+    t1.block<3,1>(0,3) = v1;
+    t2.block<3,1>(0,3) = v2;
+    t3.block<3,1>(0,3) = v3;
+
+    simAgents[0]->SetCurrentPose(t1);
+    simAgents[1]->SetCurrentPose(t2);
+    simAgents[2]->SetCurrentPose(t3);
+
+    Eigen::MatrixXi testLaplacian;
+    testLaplacian.resize(3,3);
+    testLaplacian << 1, -1,  0,
+                    -1,  2, -1,
+                     0, -1,  1;
+    
+    Eigen::MatrixXi laplacian = env.ComputeLaplacian();
+    EXPECT_EQ(env.ComputeLaplacian(),testLaplacian);
+    std::vector<std::shared_ptr<SwarmAgent>> neighborhood1 = env.GetNeighborhood(0);
+    std::vector<std::shared_ptr<SwarmAgent>> neighborhood2 = env.GetNeighborhood(1);
+    std::vector<std::shared_ptr<SwarmAgent>> neighborhood3 = env.GetNeighborhood(2);
+
+    EXPECT_EQ(neighborhood1.size(),1);
+    EXPECT_EQ(neighborhood2.size(),2);
+    EXPECT_EQ(neighborhood3.size(),1);
+    EXPECT_EQ(neighborhood1[0],simAgents[1]);
+    EXPECT_EQ(neighborhood2[0],simAgents[0]);
+    EXPECT_EQ(neighborhood2[1],simAgents[2]);
+    EXPECT_EQ(neighborhood3[0],simAgents[1]);
+}
+
+TEST_F(EnvironmentTest, DisconnectedGraphTest){
+    Eigen::Matrix3d rotMat = Eigen::Matrix3d::Identity();
+    Eigen::Vector3d v1 = {1, 2, 3};
+    Eigen::Vector3d v2 = v1;
+    Eigen::Vector3d v3 = v1;
+    v2.x() += 151; // Outside sensing radius
+    v3.x() -= 151; // Outside sensing radius
+    Eigen::Matrix4d t1, t2, t3;
+
+    t1.block<3,3>(0,0) = rotMat;
+    t2.block<3,3>(0,0) = rotMat;
+    t3.block<3,3>(0,0) = rotMat;
+
+    t1.block<3,1>(0,3) = v1;
+    t2.block<3,1>(0,3) = v2;
+    t3.block<3,1>(0,3) = v3;
+
+    simAgents[0]->SetCurrentPose(t1);
+    simAgents[1]->SetCurrentPose(t2);
+    simAgents[2]->SetCurrentPose(t3);
+
+    Eigen::MatrixXi testLaplacian;
+    testLaplacian.resize(3,3);
+    testLaplacian = Eigen::MatrixXi::Zero(3,3);
+
+    Eigen::MatrixXi laplacian = env.ComputeLaplacian();
+    EXPECT_EQ(env.ComputeLaplacian(),testLaplacian);
+    std::vector<std::shared_ptr<SwarmAgent>> neighborhood1 = env.GetNeighborhood(0);
+    std::vector<std::shared_ptr<SwarmAgent>> neighborhood2 = env.GetNeighborhood(1);
+    std::vector<std::shared_ptr<SwarmAgent>> neighborhood3 = env.GetNeighborhood(2);
+
+    EXPECT_EQ(neighborhood1.size(),0);
+    EXPECT_EQ(neighborhood2.size(),0);
+    EXPECT_EQ(neighborhood3.size(),0);
+}

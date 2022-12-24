@@ -9,23 +9,25 @@
 #include "SimObjABC.hpp"
 #include "swarmAgent.hpp"
 
-class EnvironmentManager : public SimObj {
+class EnvironmentManager {
     public:
     // Attributes
+    uint numAgents{1};
 
     // Methods
     void Simulate();
-    std::vector<SwarmAgent*> GetNeighborhood();
+    Eigen::MatrixXi ComputeLaplacian();
+    std::vector<std::shared_ptr<SwarmAgent>> GetNeighborhood(uint);
+    std::vector<std::shared_ptr<SwarmAgent>> GetAgentList();
 
     // Constructor
-    EnvironmentManager(){};
-    EnvironmentManager(std::vector<SwarmAgent*>);
+    EnvironmentManager() {};
+    EnvironmentManager(std::vector<std::shared_ptr<SwarmAgent>> agents) : agentList(agents), numAgents(agents.size()), laplacian(Eigen::MatrixXi::Zero(agents.size(),agents.size())) {};
 
     private:
     // Attributes
-    Eigen::MatrixXd laplacian;
-    std::vector<SwarmAgent*> agentList;
+    Eigen::MatrixXi laplacian;
+    std::vector<std::shared_ptr<SwarmAgent>> agentList;
 
     // Methods
-    Eigen::MatrixXd ComputeLaplacian();
 };

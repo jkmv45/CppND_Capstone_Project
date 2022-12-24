@@ -48,6 +48,8 @@ class SwarmAgent : public SimObj {
     // Attributes
     double dt;          // Sample Time [s]
     AgentRole myRole;   // This agents role in the swarm (leader or follower) 
+    // Objects
+    Sensor sensor;
 
     // Constructor
     // swarmAgent(agentRole role, double tstep) : myRole(role), dt(tstep) {}
@@ -62,8 +64,6 @@ class SwarmAgent : public SimObj {
 
     private:
     // Attributes
-    // Objects
-    Sensor sensor;
     // Structs
     VehicleParams vehParams;
     ControlParams ctrlParams;

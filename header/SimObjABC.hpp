@@ -1,19 +1,23 @@
 #pragma once
 
+#include "eigen3/Eigen/Geometry"
+
 // Define Generic Simulation Object Parent Class
 class SimObj {
     public:
     virtual void Simulate() = 0;
 
     // Getters
-    Eigen::Matrix4d GetCurrentPose(){ return pose; };
-    Eigen::Vector3d GetCurrentAngVel(){ return angVel; };
-    double GetCurrentSpeed(){ return fwdSpd; };
+    Eigen::Matrix4d GetCurrentPose();
+    Eigen::Matrix3d GetCurrentAttitude();
+    Eigen::Vector3d GetCurrentPosition();
+    Eigen::Vector3d GetCurrentAngVel();
+    double GetCurrentSpeed();
 
     // Setters
-    void SetCurrentPose(Eigen::Matrix4d newPose){ pose = newPose; }
-    void SetCurrentAngVel(Eigen::Vector4d newVel){ angVel = newVel; }
-    void SetCurrentSpeed(double newSpeed){ fwdSpd = newSpeed; }
+    void SetCurrentPose(Eigen::Matrix4d);
+    void SetCurrentAngVel(Eigen::Vector3d);
+    void SetCurrentSpeed(double);
 
     // Attributes
     protected:
