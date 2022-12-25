@@ -11,6 +11,8 @@ SwarmAgent::SwarmAgent(AgentRole role, double tstep, uint numVeh){
     this -> fwdSpd = 0;
     this -> sensor = Sensor(vehParams.senseRadius);
     this -> numAgents = numVeh;
+    // Compute APF Coefficient b
+    this -> ctrlParams.bAPF = ctrlParams.aAPF * exp((ctrlParams.eAPF * ctrlParams.eAPF * vehParams.wingSpan*vehParams.wingSpan)/ctrlParams.cAPF);
 }
 
 // Public Methods
@@ -76,6 +78,7 @@ Eigen::Vector4d SwarmAgent::ComputeControlInputs(){
     nvec = GetNormalVec(pose);
     bvec = GetBinormalVec(pose);
     // Compute Artificial Potential Function (APF) and Consensus Controls
+    jFlock = 0;
     for (uint j = 0; j < neighborhoodSize; j++){
         // Compute Relative Position of Agent J to This Agent
         relPos = GetCurrentPosition() - poseData[j].block<3,1>(0,3);
@@ -103,6 +106,9 @@ Eigen::Vector4d SwarmAgent::ComputeControlInputs(){
         // Angular Rate 3 Control
         u4APF = u4APF - resAPF.x()*relPosHat.dot(nvec);
         u4CNS = u4CNS + tvecj.dot(nvec);
+
+        // Lyapunov Function Update for Flocking
+        jFlock = jFlock + resAPF.y();
     }
 
     // Apply Control Gains
@@ -139,5 +145,9 @@ void SwarmAgent::PropagateStates(){
 }
 
 Eigen::Vector2d SwarmAgent::ComputeAPF(double rrel){
-    return {rrel, 0};
+    double g = 0;
+    double rDiffSq = (rrel - vehParams.wingSpan)*(rrel - vehParams.wingSpan);
+    g = rrel * (ctrlParams.aAPF - ctrlParams.bAPF * exp(-1.0 * rDiffSq / ctrlParams.cAPF));
+    // TODO: Derive and compute integral of g(r)
+    return {g, 0};
 }

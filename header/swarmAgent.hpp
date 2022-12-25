@@ -30,6 +30,10 @@ struct ControlParams{
     Eigen::Vector4d gainObj;    // Objective Control Gains
     Eigen::Vector4d maxU;       // Control Input Limits
     double damping;             // Acceleration Damping Gain
+    double aAPF;                // APF Attraction Coefficient
+    double bAPF;                // APF Repulsion Coefficient
+    double cAPF;                // APF Shaping Coefficient
+    double eAPF;                // Wingspan Multiplier for APF Shaping
 
     // Contructor w/ Default Params
     ControlParams(){
@@ -38,6 +42,8 @@ struct ControlParams{
         Eigen::Vector4d gainObj = {0.006, 0, 0.001, 0.001};
         Eigen::Vector4d maxU = {5, 1, 2, 2};
         double damping = 6.0;    
+        double aAPF = 2;
+        double cAPF = 40;
     }
 };
 
@@ -47,6 +53,7 @@ class SwarmAgent : public SimObj {
     public:
     // Attributes
     double dt;          // Sample Time [s]
+    double jFlock;      // Potential Energy related to Flocking (for Lyapunov Fcn computation)
     AgentRole myRole;   // This agents role in the swarm (leader or follower) 
     // Objects
     Sensor sensor;
