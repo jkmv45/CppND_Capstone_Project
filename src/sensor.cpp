@@ -8,7 +8,7 @@ Sensor::Sensor(double range){
 }
 
 void Sensor::SetDetectedObjects(std::vector<std::shared_ptr<SimObj>> objInRange){
-    newDataAvailable = (objDet != objInRange);
+    neighborChange = (objDet != objInRange);
     objDet.clear();
     objDet = objInRange;
     noTargetInRange = (objInRange.size() == 0);

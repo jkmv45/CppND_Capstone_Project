@@ -8,9 +8,10 @@
 class SwarmAgentTest : public ::testing::Test{
     protected:
     SwarmAgentTest() {
+        uint numAgents = 2;
         double timestep = 0.001;
-        this -> agent1 = SwarmAgent(AgentRole::leader,timestep);
-        this -> agent2 = SwarmAgent(AgentRole::follower,timestep);
+        this -> agent1 = SwarmAgent(AgentRole::leader,timestep,numAgents);
+        this -> agent2 = SwarmAgent(AgentRole::follower,timestep,numAgents);
     }
 
     // void TearDown() override {}
@@ -23,10 +24,11 @@ class SwarmAgentTest : public ::testing::Test{
 class SensorTest : public ::testing::Test{
     protected:
     SensorTest() {
+        uint numAgents = 2;
         double timestep = 0.001;
         double range = 100;
-        sensedAgents.push_back(std::make_shared<SwarmAgent>(SwarmAgent(AgentRole::leader,timestep)));
-        sensedAgents.push_back(std::make_shared<SwarmAgent>(SwarmAgent(AgentRole::leader,timestep)));
+        sensedAgents.push_back(std::make_shared<SwarmAgent>(SwarmAgent(AgentRole::leader,timestep,numAgents)));
+        sensedAgents.push_back(std::make_shared<SwarmAgent>(SwarmAgent(AgentRole::leader,timestep,numAgents)));
         this -> testSensor = Sensor(range);
     }
 
@@ -39,11 +41,12 @@ class SensorTest : public ::testing::Test{
 class EnvironmentTest : public ::testing::Test{
     protected:
     EnvironmentTest() {
+        uint numAgents = 3;
         double timestep = 0.001;
         double range = 100;
-        simAgents.push_back(std::make_shared<SwarmAgent>(SwarmAgent(AgentRole::leader,timestep)));
-        simAgents.push_back(std::make_shared<SwarmAgent>(SwarmAgent(AgentRole::follower,timestep)));
-        simAgents.push_back(std::make_shared<SwarmAgent>(SwarmAgent(AgentRole::follower,timestep)));
+        simAgents.push_back(std::make_shared<SwarmAgent>(SwarmAgent(AgentRole::leader,timestep,numAgents)));
+        simAgents.push_back(std::make_shared<SwarmAgent>(SwarmAgent(AgentRole::follower,timestep,numAgents)));
+        simAgents.push_back(std::make_shared<SwarmAgent>(SwarmAgent(AgentRole::follower,timestep,numAgents)));
         env = EnvironmentManager(simAgents);
     }
 
@@ -59,7 +62,7 @@ class EnvironmentTest : public ::testing::Test{
 TEST_F(SwarmAgentTest,ConstructorTest){
     AgentRole testrole = AgentRole::leader;
     double testval = 0.01;
-    SwarmAgent myAgent = SwarmAgent(testrole, testval);
+    SwarmAgent myAgent = SwarmAgent(testrole, testval,1);
     EXPECT_EQ(myAgent.dt, testval) << "Time Step not set";
     EXPECT_EQ(myAgent.myRole,testrole);
 }
@@ -103,11 +106,11 @@ TEST_F(SensorTest, NoTargetFlagTest){
     EXPECT_FALSE(testSensor.noTargetInRange);
 }
 
-TEST_F(SensorTest, NewDataFlagTest){
+TEST_F(SensorTest, NewNeighborFlagTest){
     testSensor.SetDetectedObjects(sensedAgents);
-    EXPECT_TRUE(testSensor.newDataAvailable);
+    EXPECT_TRUE(testSensor.neighborChange);
     testSensor.SetDetectedObjects(sensedAgents);
-    EXPECT_FALSE(testSensor.newDataAvailable);
+    EXPECT_FALSE(testSensor.neighborChange);
 }
 
 TEST_F(SensorTest, PoseDataTest){

@@ -54,7 +54,7 @@ class SwarmAgent : public SimObj {
     // Constructor
     // swarmAgent(agentRole role, double tstep) : myRole(role), dt(tstep) {}
     SwarmAgent(){};
-    SwarmAgent(AgentRole role, double tstep);
+    SwarmAgent(AgentRole, double, uint);
 
     // Methods
     void Simulate();
@@ -76,11 +76,12 @@ class SwarmAgent : public SimObj {
     // Eigen::Vector3d angVel;     // Current angular velocity of agent [rad/s]
     // Scalars
     // double fwdSpd;              // Current forward speed of agent [m/s]
+    uint numAgents;
 
     // Methods
     // Eigen::Matrix4d senseNeighborPose(swarmAgent* neighbor);
     // Eigen::Vector4d senseNeighborVel(swarmAgent* neighbor);
     Eigen::Vector4d ComputeControlInputs();
+    Eigen::Vector2d ComputeAPF(double);
     void PropagateStates();
-    double ComputeAPF(double);
 };

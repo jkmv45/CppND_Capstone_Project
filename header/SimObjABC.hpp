@@ -12,6 +12,9 @@ class SimObj {
     Eigen::Matrix3d GetCurrentAttitude();
     Eigen::Vector3d GetCurrentPosition();
     Eigen::Vector3d GetCurrentAngVel();
+    Eigen::Vector3d GetTangentVec(Eigen::Matrix4d&);
+    Eigen::Vector3d GetNormalVec(Eigen::Matrix4d&);
+    Eigen::Vector3d GetBinormalVec(Eigen::Matrix4d&);
     double GetCurrentSpeed();
 
     // Setters
