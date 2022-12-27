@@ -13,9 +13,10 @@ Eigen::Vector3d SimObj::GetCurrentPosition() {
 Eigen::Vector3d SimObj::GetCurrentAngVel(){ return angVel; };
 double SimObj::GetCurrentSpeed(){ return fwdSpd; };
 
-Eigen::Vector3d SimObj::GetTangentVec(Eigen::Matrix4d &inpose){ return inpose.block<1,3>(0,0); }
-Eigen::Vector3d SimObj::GetNormalVec(Eigen::Matrix4d &inpose){ return inpose.block<1,3>(1,0); }
-Eigen::Vector3d SimObj::GetBinormalVec(Eigen::Matrix4d &inpose){ return inpose.block<1,3>(2,0); }
+Eigen::Matrix3d SimObj::GetAttitudeMatrix(Eigen::Matrix4d &inpose){ return inpose.block<3,3>(0,0); }
+Eigen::Vector3d SimObj::GetTangentVec(Eigen::Matrix3d &inpose){ return inpose.block<1,3>(0,0); }
+Eigen::Vector3d SimObj::GetNormalVec(Eigen::Matrix3d &inpose){ return inpose.block<1,3>(1,0); }
+Eigen::Vector3d SimObj::GetBinormalVec(Eigen::Matrix3d &inpose){ return inpose.block<1,3>(2,0); }
 
 // Setters
 void SimObj::SetCurrentPose(Eigen::Matrix4d newPose){ 
@@ -28,4 +29,12 @@ void SimObj::SetCurrentAngVel(Eigen::Vector3d newVel){
 
 void SimObj::SetCurrentSpeed(double newSpeed){ 
     fwdSpd = newSpeed; 
+}
+
+Eigen::Matrix3d SimObj::skewSymmetric(Eigen::Vector3d vec){
+    Eigen::Matrix3d result;
+    result <<   0,      -vec[2],     vec[1],
+                vec[2],  0,         -vec[0],
+               -vec[1],  vec[0],     0;
+    return result;
 }

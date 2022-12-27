@@ -12,6 +12,7 @@ class SwarmAgentTest : public ::testing::Test{
         double timestep = 0.001;
         this -> agent1 = SwarmAgent(AgentRole::leader,timestep,numAgents);
         this -> agent2 = SwarmAgent(AgentRole::follower,timestep,numAgents);
+        this -> testDCM = Eigen::Matrix3d::Identity();
     }
 
     // void TearDown() override {}
@@ -19,6 +20,7 @@ class SwarmAgentTest : public ::testing::Test{
     // EnvironmentManager env;
     SwarmAgent agent1;
     SwarmAgent agent2;
+    Eigen::Matrix3d testDCM;
 };
 
 class SensorTest : public ::testing::Test{
@@ -82,6 +84,90 @@ TEST_F(SwarmAgentTest,GetSpeed){
     EXPECT_EQ(mySpeed,0);
 }
 
+TEST_F(SwarmAgentTest, SkewSymmetric){
+    Eigen::Vector3d vec = {1, 2, 3};
+    Eigen::Matrix3d mat;
+    mat <<   0, -3,  2, 
+             3,  0, -1, 
+            -2,  1,  0;
+    Eigen::Matrix3d resMat = agent1.skewSymmetric(vec);
+    EXPECT_EQ(resMat,mat);
+}
+
+TEST_F(SwarmAgentTest, GetCurrentPositionTest){
+    EXPECT_EQ(agent1.GetCurrentPosition(), Eigen::Vector3d::Zero());
+}
+
+TEST_F(SwarmAgentTest, GetCurrentAttitudeTest){
+    EXPECT_EQ(agent1.GetCurrentAttitude(), testDCM);
+}
+
+TEST_F(SwarmAgentTest, GetAttitudeTest){
+    Eigen::Matrix4d testPose = Eigen::Matrix4d::Identity();
+    EXPECT_EQ(agent1.GetAttitudeMatrix(testPose),testDCM);
+}
+TEST_F(SwarmAgentTest, GetTangentTest){
+    Eigen::Vector3d tvec = {1, 0, 0};
+    EXPECT_EQ(agent1.GetTangentVec(testDCM), tvec);
+}
+
+TEST_F(SwarmAgentTest, GetNormalTest){
+    Eigen::Vector3d tvec = {0, 1, 0};
+    EXPECT_EQ(agent1.GetNormalVec(testDCM), tvec);
+}
+
+TEST_F(SwarmAgentTest, GetBinormalTest){
+    Eigen::Vector3d tvec = {0, 0, 1};
+    EXPECT_EQ(agent1.GetBinormalVec(testDCM), tvec);
+}
+
+TEST_F(SwarmAgentTest, SimulateTest){
+    Eigen::Matrix3d rotMat = Eigen::Matrix3d::Identity();
+    Eigen::Vector3d v1 = {1, 2, 3};
+    Eigen::Vector3d v2 = v1;
+    v2.x() += 25; // Inside sensing radius, close to rmin
+    Eigen::Matrix4d t1 = Eigen::Matrix4d::Identity(); 
+    Eigen::Matrix4d t2 = Eigen::Matrix4d::Identity();
+    t1.block<3,3>(0,0) = rotMat;
+
+    // Set t2 to a slightly different attitude
+    Eigen::AngleAxisd aa = Eigen::AngleAxisd(0.1*M_PI, Eigen::Vector3d::UnitZ());
+    Eigen::Quaterniond q = Eigen::Quaterniond(aa);
+    rotMat = q.matrix();
+
+    t2.block<3,3>(0,0) = rotMat;
+
+    t1.block<3,1>(0,3) = v1;
+    t2.block<3,1>(0,3) = v2;
+
+    agent1.SetCurrentPose(t1);
+    agent2.SetCurrentPose(t2);
+    
+    // Store Starting States
+    double startSpeed = agent1.GetCurrentSpeed();
+    Eigen::Vector3d startAngVel = agent1.GetCurrentAngVel();
+    Eigen::Matrix4d startPose = agent1.GetCurrentPose();
+    // Prepare Sensor
+    std::vector<std::shared_ptr<SimObj>> neighbors;
+    neighbors.push_back(std::make_shared<SwarmAgent>(std::move(agent2)));
+    agent1.sensor.SetDetectedObjects(neighbors);
+    // Run A Simluation Step
+    agent1.Simulate();
+    // Get End States to Compare
+    double endSpeed = agent1.GetCurrentSpeed();
+    Eigen::Vector3d endAngVel = agent1.GetCurrentAngVel();
+    Eigen::Matrix4d endPose = agent1.GetCurrentPose();
+    // Assertions
+    EXPECT_NE(startPose,endPose);
+    EXPECT_FALSE(endPose.hasNaN()) << "End Pose Has NaN" << std::endl << endPose;
+
+    EXPECT_NE(startSpeed,endSpeed);
+    EXPECT_FALSE(std::isnan(endSpeed)) << "End Speed is NaN" << std::endl << endSpeed;
+
+    EXPECT_NE(startAngVel,endAngVel);
+    EXPECT_FALSE(endAngVel.hasNaN()) << "End AngVel Has NaN" << std::endl << endAngVel;
+
+}
 
 // *****************************************************************************************************
 // ******************************************* Sensor Tests ********************************************
@@ -153,7 +239,9 @@ TEST_F(EnvironmentTest, ConnectedGraphTest){
     Eigen::Vector3d v3 = v1;
     v2.x() += 149; // Inside sensing radius
     v3.x() += 151; // Outside sensing radius
-    Eigen::Matrix4d t1, t2, t3;
+    Eigen::Matrix4d t1 = Eigen::Matrix4d::Identity(); 
+    Eigen::Matrix4d t2 = Eigen::Matrix4d::Identity();
+    Eigen::Matrix4d t3 = Eigen::Matrix4d::Identity(); 
 
     t1.block<3,3>(0,0) = rotMat;
     t2.block<3,3>(0,0) = rotMat;
@@ -195,7 +283,9 @@ TEST_F(EnvironmentTest, DisconnectedGraphTest){
     Eigen::Vector3d v3 = v1;
     v2.x() += 151; // Outside sensing radius
     v3.x() -= 151; // Outside sensing radius
-    Eigen::Matrix4d t1, t2, t3;
+    Eigen::Matrix4d t1 = Eigen::Matrix4d::Identity(); 
+    Eigen::Matrix4d t2 = Eigen::Matrix4d::Identity();
+    Eigen::Matrix4d t3 = Eigen::Matrix4d::Identity(); 
 
     t1.block<3,3>(0,0) = rotMat;
     t2.block<3,3>(0,0) = rotMat;

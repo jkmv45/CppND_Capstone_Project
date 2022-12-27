@@ -2,6 +2,8 @@
 
 // Constructor
 SwarmAgent::SwarmAgent(AgentRole role, double tstep, uint numVeh){
+    this -> ctrlParams = ControlParams();
+    this -> vehParams = VehicleParams();
     this -> myRole = role;
     this -> dt = tstep;
     // Initialize Private Variables
@@ -12,13 +14,20 @@ SwarmAgent::SwarmAgent(AgentRole role, double tstep, uint numVeh){
     this -> sensor = Sensor(vehParams.senseRadius);
     this -> numAgents = numVeh;
     // Compute APF Coefficient b
-    this -> ctrlParams.bAPF = ctrlParams.aAPF * exp((ctrlParams.eAPF * ctrlParams.eAPF * vehParams.wingSpan*vehParams.wingSpan)/ctrlParams.cAPF);
+    double rmin = ctrlParams.eAPF * vehParams.wingSpan;
+    this -> ctrlParams.bAPF = ctrlParams.aAPF * exp((rmin - vehParams.wingSpan) * (rmin - vehParams.wingSpan)/ctrlParams.cAPF);
+    // Compute Integration Constant to achieve global minimum
+    Eigen::Vector2d minAPF = this -> ComputeAPF(rmin);
+    this -> ctrlParams.c0APF = minAPF[1];
 }
 
 // Public Methods
 void SwarmAgent::Simulate(){
+    // std::cout << "Step 1" << std::endl;
     ComputeControlInputs();
+    // std::cout << "Step 2" << std::endl;
     PropagateStates();
+    // std::cout << "Step 3" << std::endl;
 }
 
 // Getters
@@ -51,7 +60,7 @@ void SwarmAgent::Simulate(){
 //     return vvec;
 // }
 
-Eigen::Vector4d SwarmAgent::ComputeControlInputs(){
+void SwarmAgent::ComputeControlInputs(){
     // Poll Sensor for Neighboring Agents
     sensor.SamplePoseSensor();
     sensor.SampleRateSensor();
@@ -68,18 +77,22 @@ Eigen::Vector4d SwarmAgent::ComputeControlInputs(){
     // Initialize Control Inputs for Summation over Loop
     double u1APF, u1CNS, u1DMP, u2APF, u2CNS, u3APF, u3CNS, u4APF, u4CNS = 0;
     double u1OBJ, u2OBJ, u3OBJ, u4OBJ = 0;
-    Eigen::Vector2d resAPF;
+    Eigen::Vector2d resAPF = Eigen::Vector2d::Zero();
 
     // Define Pose Related Variables
     double relSpeed, relDist;
     Eigen::Vector3d relPos, relPosHat;
     Eigen::Vector3d tvec, nvec, bvec, tvecj;
-    tvec = GetTangentVec(pose);
-    nvec = GetNormalVec(pose);
-    bvec = GetBinormalVec(pose);
+    Eigen::Matrix3d dcmNeighbor;
+    Eigen::Matrix3d dcm = GetCurrentAttitude();
+    tvec = GetTangentVec(dcm);
+    nvec = GetNormalVec(dcm);
+    bvec = GetBinormalVec(dcm);
     // Compute Artificial Potential Function (APF) and Consensus Controls
     jFlock = 0;
     for (uint j = 0; j < neighborhoodSize; j++){
+        // Get Neighbor Attitude
+        dcmNeighbor = GetAttitudeMatrix(poseData[j]);
         // Compute Relative Position of Agent J to This Agent
         relPos = GetCurrentPosition() - poseData[j].block<3,1>(0,3);
         relDist = relPos.norm();
@@ -89,7 +102,7 @@ Eigen::Vector4d SwarmAgent::ComputeControlInputs(){
         // Compute APF and its Derivative Value
         resAPF = ComputeAPF(relDist);
         // Get Neighbor's Heading Vector
-        tvecj = GetTangentVec(poseData[j]);
+        tvecj = GetTangentVec(dcmNeighbor);
 
         // Acceleration Control
         u1APF = u1APF - resAPF.x()*relPosHat.dot(tvec);
@@ -100,8 +113,8 @@ Eigen::Vector4d SwarmAgent::ComputeControlInputs(){
         u2CNS = u2CNS + 0;
 
         // Angular Rate 2 Control
-        u3APF = u3APF - resAPF.x()*relPosHat.dot(bvec);
-        u3CNS = u3CNS + tvecj.dot(bvec);
+        u3APF = u3APF + resAPF.x()*relPosHat.dot(bvec);
+        u3CNS = u3CNS - tvecj.dot(bvec);
 
         // Angular Rate 3 Control
         u4APF = u4APF - resAPF.x()*relPosHat.dot(nvec);
@@ -136,18 +149,68 @@ Eigen::Vector4d SwarmAgent::ComputeControlInputs(){
 
     // TODO: Apply Saturation Logic
 
-    Eigen::Vector4d u = {u1, u2, u3, u4};
-    return u;
+    // Eigen::Vector4d u = {u1, u2, u3, u4};
+    inputU = {u1, u2, u3, u4};
+    // return u;
 }
 
 void SwarmAgent::PropagateStates(){
+    // Get Last Known Values
+    Eigen::Matrix3d lastAttitude = GetCurrentAttitude();
+    Eigen::Vector3d lastHeading = GetTangentVec(lastAttitude);
+    Eigen::Vector3d lastPosition = GetCurrentPosition();
+    // Setup Integration Variables
+    Eigen::Vector3d k1pos, k2pos, k3pos, k4pos, nextPosition;
+    Eigen::Matrix3d k1att, k2att, k3att, k4att, nextAttitude;
+    double deltaSpeed, nextSpeed;
+    // Get Angular Velocity as Skew Symmetric Matrix
+    angVel = inputU.block<3,1>(1,0);
+    Eigen::Matrix3d omega = skewSymmetric(angVel);
+    // Compute Delta Speed at this step
+    deltaSpeed = dt * inputU[0];
 
+    // Perform Runge-Kutta 4th Order Integration on Position and Attitude
+    k1pos = dt * fwdSpd * lastHeading;
+    k1att = -1.0 * dt * omega * lastAttitude;
+
+    k2pos = dt * (fwdSpd + 0.5 * deltaSpeed) * (lastHeading + 0.5 * GetTangentVec(k1att));
+    k2att = -1.0 * dt * omega * (lastAttitude + 0.5 * k1att);
+
+    k3pos = dt * (fwdSpd + 0.5 * deltaSpeed) * (lastHeading + 0.5 * GetTangentVec(k2att));
+    k3att = -1.0 * dt * omega * (lastAttitude + 0.5 * k2att);
+
+    k4pos = dt * (fwdSpd + deltaSpeed) * (lastHeading + GetTangentVec(k3att));
+    k4att = -1.0 * dt * omega * (lastAttitude + k3att);
+
+    nextPosition = lastPosition + (k1pos + 2*k2pos + 2*k3pos + k4pos) / 6.0;
+    nextAttitude = lastAttitude + (k1att + 2*k2att + 2*k3att + k4att) / 6.0;
+    
+    // Normalize Attitude Matrix
+    Eigen::Vector3d tvec, nvec, bvec;
+    double tvecNorm, nvecNorm, bvecNorm = 1;
+    tvec = GetTangentVec(nextAttitude);
+    nvec = GetNormalVec(nextAttitude);
+    bvec = GetBinormalVec(nextAttitude);
+    
+    tvec = tvec / tvec.norm();
+    nvec = nvec / nvec.norm();
+    bvec = bvec / bvec.norm();
+
+    nextAttitude << tvec, nvec, bvec;
+
+    // Update Speed and Pose
+    fwdSpd += deltaSpeed;
+    pose.block<3,1>(0,3) = nextPosition;
+    pose.block<3,3>(0,0) = nextAttitude;
 }
 
 Eigen::Vector2d SwarmAgent::ComputeAPF(double rrel){
-    double g = 0;
-    double rDiffSq = (rrel - vehParams.wingSpan)*(rrel - vehParams.wingSpan);
-    g = rrel * (ctrlParams.aAPF - ctrlParams.bAPF * exp(-1.0 * rDiffSq / ctrlParams.cAPF));
-    // TODO: Derive and compute integral of g(r)
-    return {g, 0};
+    double g, gIntegral = 0;
+    double exponent = (rrel - vehParams.wingSpan)*(rrel - vehParams.wingSpan) / ctrlParams.cAPF;
+    // Compute APF Function Value for Control
+    g = rrel * (ctrlParams.aAPF - ctrlParams.bAPF * exp(-1.0 * exponent ));
+    // Compute Integral for Lyapunov Function (Stability Metric)
+    gIntegral = ctrlParams.bAPF * (-0.5 * vehParams.wingSpan * sqrt(M_PI * ctrlParams.cAPF) * erf((vehParams.wingSpan - rrel)/sqrt(ctrlParams.cAPF))
+                 - 0.5 * ctrlParams.cAPF * exp(-1.0 * exponent)) + 0.5 * ctrlParams.aAPF * rrel * rrel - ctrlParams.c0APF;
+    return {g, gIntegral};
 }

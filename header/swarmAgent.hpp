@@ -33,17 +33,21 @@ struct ControlParams{
     double aAPF;                // APF Attraction Coefficient
     double bAPF;                // APF Repulsion Coefficient
     double cAPF;                // APF Shaping Coefficient
-    double eAPF;                // Wingspan Multiplier for APF Shaping
+    double eAPF;                // Wingspan Multiplier for APF Shaping (factor of safety)
+    double c0APF;               // Integration constant for APF
 
     // Contructor w/ Default Params
     ControlParams(){
-        Eigen::Vector4d gainAPF = {0.5, 0, 0.003, 0.005};
-        Eigen::Vector4d gainCons = {5, 0, 4, 6};
-        Eigen::Vector4d gainObj = {0.006, 0, 0.001, 0.001};
-        Eigen::Vector4d maxU = {5, 1, 2, 2};
-        double damping = 6.0;    
-        double aAPF = 2;
-        double cAPF = 40;
+        gainAPF = {0.5, 0, 0.003, 0.005};
+        gainCons = {5, 0, 4, 6};
+        gainObj = {0.006, 0, 0.001, 0.001};
+        maxU = {5, 1, 2, 2};
+        damping = 6.0;    
+        aAPF = 2;
+        bAPF = 0;
+        cAPF = 40;
+        eAPF = 10;
+        c0APF = 0;
     }
 };
 
@@ -88,7 +92,7 @@ class SwarmAgent : public SimObj {
     // Methods
     // Eigen::Matrix4d senseNeighborPose(swarmAgent* neighbor);
     // Eigen::Vector4d senseNeighborVel(swarmAgent* neighbor);
-    Eigen::Vector4d ComputeControlInputs();
-    Eigen::Vector2d ComputeAPF(double);
+    void ComputeControlInputs();
     void PropagateStates();
+    Eigen::Vector2d ComputeAPF(double);
 };
