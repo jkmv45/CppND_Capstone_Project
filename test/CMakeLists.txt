@@ -15,7 +15,7 @@ FetchContent_MakeAvailable(googletest)
 set(CXX_FLAGS "-Wall")
 set(CMAKE_CXX_FLAGS, "${CXX_FLAGS}")
 
-enable_testing()
+# enable_testing()
 
 project(SwarmSimulationTester)
 
