@@ -156,12 +156,12 @@ void SwarmAgent::ComputeControlInputs(){
 
 void SwarmAgent::PropagateStates(){
     // Get Last Known Values
-    Eigen::Matrix3d lastAttitude = GetCurrentAttitude();
-    Eigen::Vector3d lastHeading = GetTangentVec(lastAttitude);
-    Eigen::Vector3d lastPosition = GetCurrentPosition();
+    Eigen::Matrix3d attitude = GetCurrentAttitude();
+    Eigen::Vector3d lastHeading = GetTangentVec(attitude);
+    Eigen::Vector3d position = GetCurrentPosition();
     // Setup Integration Variables
-    Eigen::Vector3d k1pos, k2pos, k3pos, k4pos, nextPosition;
-    Eigen::Matrix3d k1att, k2att, k3att, k4att, nextAttitude;
+    Eigen::Vector3d k1pos, k2pos, k3pos, k4pos;
+    Eigen::Matrix3d k1att, k2att, k3att, k4att;
     double deltaSpeed, nextSpeed;
     // Get Angular Velocity as Skew Symmetric Matrix
     angVel = inputU.block<3,1>(1,0);
@@ -171,37 +171,24 @@ void SwarmAgent::PropagateStates(){
 
     // Perform Runge-Kutta 4th Order Integration on Position and Attitude
     k1pos = dt * fwdSpd * lastHeading;
-    k1att = -1.0 * dt * omega * lastAttitude;
+    k1att = -1.0 * dt * omega * attitude;
 
     k2pos = dt * (fwdSpd + 0.5 * deltaSpeed) * (lastHeading + 0.5 * GetTangentVec(k1att));
-    k2att = -1.0 * dt * omega * (lastAttitude + 0.5 * k1att);
+    k2att = -1.0 * dt * omega * (attitude + 0.5 * k1att);
 
     k3pos = dt * (fwdSpd + 0.5 * deltaSpeed) * (lastHeading + 0.5 * GetTangentVec(k2att));
-    k3att = -1.0 * dt * omega * (lastAttitude + 0.5 * k2att);
+    k3att = -1.0 * dt * omega * (attitude + 0.5 * k2att);
 
     k4pos = dt * (fwdSpd + deltaSpeed) * (lastHeading + GetTangentVec(k3att));
-    k4att = -1.0 * dt * omega * (lastAttitude + k3att);
+    k4att = -1.0 * dt * omega * (attitude + k3att);
 
-    nextPosition = lastPosition + (k1pos + 2*k2pos + 2*k3pos + k4pos) / 6.0;
-    nextAttitude = lastAttitude + (k1att + 2*k2att + 2*k3att + k4att) / 6.0;
-    
-    // Normalize Attitude Matrix
-    Eigen::Vector3d tvec, nvec, bvec;
-    double tvecNorm, nvecNorm, bvecNorm = 1;
-    tvec = GetTangentVec(nextAttitude);
-    nvec = GetNormalVec(nextAttitude);
-    bvec = GetBinormalVec(nextAttitude);
-    
-    tvec = tvec / tvec.norm();
-    nvec = nvec / nvec.norm();
-    bvec = bvec / bvec.norm();
-
-    nextAttitude << tvec, nvec, bvec;
+    position += (k1pos + 2*k2pos + 2*k3pos + k4pos) / 6.0;
+    attitude += (k1att + 2*k2att + 2*k3att + k4att) / 6.0;
 
     // Update Speed and Pose
     fwdSpd += deltaSpeed;
-    pose.block<3,1>(0,3) = nextPosition;
-    pose.block<3,3>(0,0) = nextAttitude;
+    SetCurrentPosition(position);
+    SetCurrentAttitude(attitude);
 }
 
 Eigen::Vector2d SwarmAgent::ComputeAPF(double rrel){

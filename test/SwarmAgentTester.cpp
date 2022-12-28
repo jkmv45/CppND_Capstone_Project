@@ -479,7 +479,7 @@ TEST_F(IntegrationTests, N2_AttractionAPF_Test){
     std::array<std::array<double,numVeh>,numSteps> speedHist;
     // Note, doing this for now b/c I am only testing 2 agents
     // TODO: Update to handle N agents
-    std::array<double,numSteps> relDistHist, relHeadingHist;
+    std::array<double,numSteps> relDistHist, relHeadingHist, detCheck;
     std::array<std::array<Eigen::Matrix4d,numVeh>,numSteps> poseHist;
     std::array<std::array<Eigen::Vector3d,numVeh>,numSteps> angvelHist;
     // Initialize Data Arrays
@@ -530,6 +530,7 @@ TEST_F(IntegrationTests, N2_AttractionAPF_Test){
 
         relDistHist[ti] = newDeltaR;
         relHeadingHist[ti] = newRelHeading;
+        detCheck[ti] = a1Att.determinant();
     }
     // End of Sim Assertions
     // Check that relative position and heading have decreased
@@ -547,6 +548,7 @@ TEST_F(IntegrationTests, N2_AttractionAPF_Test){
 
     std::vector<double> drvec(relDistHist.begin(),relDistHist.end());
     std::vector<double> dhvec(relHeadingHist.begin(),relHeadingHist.end());
+    std::vector<double> detChk(detCheck.begin(),detCheck.end());
     
     plt::figure(1);
     plt::plot(tvec, drvec, "bo-");
@@ -561,6 +563,13 @@ TEST_F(IntegrationTests, N2_AttractionAPF_Test){
     plt::title("Relative Heading over Time");
     plt::xlabel("Time [s]");
     plt::ylabel("Relative Heading [UL]");
+    plt::grid(true);
+
+    plt::figure(3);
+    plt::plot(tvec, detChk, "go-");
+    plt::title("Agent 1 Determinant over Time");
+    plt::xlabel("Time [s]");
+    plt::ylabel("Determinant [UL]");
     plt::grid(true);
     plt::show();
 
