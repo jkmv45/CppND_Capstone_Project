@@ -38,8 +38,8 @@ struct ControlParams{
 
     // Contructor w/ Default Params
     ControlParams(){
-        gainAPF = {0.5, 0, 0.003, 0.005};
-        gainCons = {5, 0, 4, 6};
+        gainAPF = {0.5, 0, 0.001, 0.001};
+        gainCons = {5, 0, 1, 1};
         gainObj = {0.006, 0, 0.001, 0.001};
         maxU = {5, 1, 2, 2};
         damping = 6.0;    

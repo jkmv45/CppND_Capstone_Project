@@ -15,14 +15,18 @@ void Sensor::SetDetectedObjects(std::vector<std::shared_ptr<SimObj>> objInRange)
 }
 
 void Sensor::SamplePoseSensor(){
-    poseData.clear();
+    if (!noTargetInRange){
+        poseData.clear(); // Only clear if we have targets in range
+    }
     for (std::shared_ptr<SimObj> obj : objDet){
         poseData.push_back(obj->GetCurrentPose());
     }
 }
 
 void Sensor::SampleRateSensor(){
-    rateData.clear();
+    if (!noTargetInRange){
+        rateData.clear(); // Only clear if we have targets in range
+    }
     for (std::shared_ptr<SimObj> obj : objDet){
         Eigen::Vector4d vvec;
         vvec[0] = obj->GetCurrentSpeed();

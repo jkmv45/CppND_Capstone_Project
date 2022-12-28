@@ -1,6 +1,12 @@
 #pragma once
 
+#include <iostream>
+
 #include "eigen3/Eigen/Geometry"
+
+// Attitude Matrix Determinant Thresholds 
+#define unitLTOL 1e-6   //  Under this tolerance, no normalization is needed
+#define unitUTOL 1e-3   // Above this tolerance, attitude matrix is invalid
 
 // Define Generic Simulation Object Parent Class
 class SimObj {
@@ -15,14 +21,19 @@ class SimObj {
     Eigen::Matrix3d GetCurrentAttitude();
     Eigen::Vector3d GetCurrentPosition();
     Eigen::Vector3d GetCurrentAngVel();
+    double GetCurrentSpeed();
+    // Helper Functions
+    Eigen::Vector3d GetPositionVec(Eigen::Matrix4d&);
     Eigen::Matrix3d GetAttitudeMatrix(Eigen::Matrix4d&);
     Eigen::Vector3d GetTangentVec(Eigen::Matrix3d&);
     Eigen::Vector3d GetNormalVec(Eigen::Matrix3d&);
     Eigen::Vector3d GetBinormalVec(Eigen::Matrix3d&);
-    double GetCurrentSpeed();
+    Eigen::Matrix3d NormalizeAttMat(Eigen::Matrix3d);
 
     // Setters
     void SetCurrentPose(Eigen::Matrix4d);
+    void SetCurrentPosition(Eigen::Vector3d);
+    void SetCurrentAttitude(Eigen::Matrix3d);
     void SetCurrentAngVel(Eigen::Vector3d);
     void SetCurrentSpeed(double);
 

@@ -10,7 +10,7 @@ SwarmAgent::SwarmAgent(AgentRole role, double tstep, uint numVeh){
     // this -> inputU = {0, 0, 0, 0};
     this -> pose = Eigen::Matrix4d::Identity();
     this -> angVel = {0, 0, 0};
-    this -> fwdSpd = 0;
+    this -> fwdSpd = vehParams.cruiseSpeed;
     this -> sensor = Sensor(vehParams.senseRadius);
     this -> numAgents = numVeh;
     // Compute APF Coefficient b

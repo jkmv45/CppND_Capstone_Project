@@ -1,10 +1,13 @@
+// Standard Lib
 #include <iostream>
 #include <vector>
 #include <array>
 
+// Third Party
 #include "matplotlibcpp.h"
 #include "eigen3/Eigen/Geometry"
 
+// Project Headers
 #include "swarmAgent.hpp"
 #include "environmentManager.hpp"
 

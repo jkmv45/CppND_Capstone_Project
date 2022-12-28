@@ -11,8 +11,8 @@
 class Sensor {
     public:
     // Attributes
-    bool noTargetInRange;
-    bool neighborChange;
+    bool noTargetInRange{false};
+    bool neighborChange{false};
 
     // Methods
     void SetDetectedObjects(std::vector<std::shared_ptr<SimObj>>);
