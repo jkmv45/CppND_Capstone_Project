@@ -7,11 +7,12 @@ SwarmAgent::SwarmAgent(AgentRole role, double tstep, uint numVeh){
     this -> myRole = role;
     this -> dt = tstep;
     // Initialize Private Variables
-    // this -> inputU = {0, 0, 0, 0};
+    this -> inputU = {0, 0, 0, 0};
     this -> pose = Eigen::Matrix4d::Identity();
     this -> angVel = {0, 0, 0};
     this -> fwdSpd = vehParams.cruiseSpeed;
-    this -> sensor = Sensor(vehParams.senseRadius);
+    // this -> sensor = Sensor(vehParams.senseRadius);
+    this -> sensor = Sensor();
     this -> numAgents = numVeh;
     // Compute APF Coefficient b
     double rmin = ctrlParams.eAPF * vehParams.wingSpan;
@@ -28,6 +29,10 @@ void SwarmAgent::Simulate(){
     // std::cout << "Step 2" << std::endl;
     PropagateStates();
     // std::cout << "Step 3" << std::endl;
+}
+
+double SwarmAgent::GetSensingRange(){
+    return vehParams.senseRadius;
 }
 
 // Getters
@@ -62,12 +67,12 @@ void SwarmAgent::Simulate(){
 
 void SwarmAgent::ComputeControlInputs(){
     // Poll Sensor for Neighboring Agents
-    sensor.SamplePoseSensor();
-    sensor.SampleRateSensor();
+    // sensor.SamplePoseSensor();
+    // sensor.SampleRateSensor();
     std::vector<Eigen::Matrix4d> poseData = sensor.GetPoseData();
-    std::vector<Eigen::Vector4d> rateData =  sensor.GetRateData();
+    std::vector<double> speedData = sensor.GetSpeedData();
 
-    if (poseData.size() != rateData.size()){
+    if (poseData.size() != speedData.size()){
         // Error State TODO
     }
 
@@ -98,7 +103,7 @@ void SwarmAgent::ComputeControlInputs(){
         relDist = relPos.norm();
         relPosHat = relPos/relDist;
         // Compute Speed of Agent J relative to This Agent
-        relSpeed = fwdSpd - rateData[j].x();
+        relSpeed = fwdSpd - speedData[j];
         // Compute APF and its Derivative Value
         resAPF = ComputeAPF(relDist);
         // Get Neighbor's Heading Vector

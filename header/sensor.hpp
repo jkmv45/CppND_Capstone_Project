@@ -15,24 +15,25 @@ class Sensor {
     bool neighborChange{false};
 
     // Methods
-    void SetDetectedObjects(std::vector<std::shared_ptr<SimObj>>);
-    void SamplePoseSensor();
-    void SampleRateSensor();
-    std::vector<Eigen::Matrix4d> GetPoseData(){ return poseData; };
-    std::vector<Eigen::Vector4d> GetRateData(){ return rateData; };
-    std::vector<std::shared_ptr<SimObj>> GetDetectedObjects(){ return objDet; };
-    double GetSensorRange(){ return sensRange; };
+    // void SetDetectedObjects(std::vector<std::shared_ptr<SimObj>>);
+    // void SamplePoseSensor();
+    // void SampleRateSensor();
+    void SetSensorData(std::vector<Eigen::Matrix4d>&,std::vector<double>&);
+    std::vector<Eigen::Matrix4d> GetPoseData();
+    std::vector<double> GetSpeedData();
+    // std::vector<std::shared_ptr<SimObj>> GetDetectedObjects(){ return objDet; };
+    // double GetSensorRange(){ return sensRange; };
 
     // Eigen::Matrix4d SenseNeighborPose(SwarmAgent* neighbor);
     // Eigen::Vector4d SenseNeighborVel(SwarmAgent* neighbor);
 
     // Constructor
-    Sensor(){};
-    Sensor(double);
+    Sensor();
+    // Sensor(double);
 
     private:
-    std::vector<std::shared_ptr<SimObj>> objDet;
+    // std::vector<std::shared_ptr<SimObj>> objDet;
     std::vector<Eigen::Matrix4d> poseData;
-    std::vector<Eigen::Vector4d> rateData;
-    double sensRange;
+    std::vector<double> speedData;
+    // double sensRange;
 };

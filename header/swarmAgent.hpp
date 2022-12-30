@@ -69,6 +69,7 @@ class SwarmAgent : public SimObj {
 
     // Methods
     void Simulate();
+    double GetSensingRange();
     // Eigen::Matrix4d GetCurrentPose();
     // Eigen::Vector3d GetCurrentAngVel();
     // double GetCurrentSpeed();

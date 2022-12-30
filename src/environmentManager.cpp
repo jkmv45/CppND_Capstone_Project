@@ -7,26 +7,57 @@
 // }
 
 void EnvironmentManager::Simulate(){
-
+    ComputeLaplacian();
+    for(uint ai = 0; ai < numAgents; ai++){
+        SimulateSensor(ai);
+        agentList[ai].Simulate();
+        // Compute Lyapunov
+        // Log Data
+    }
 }
 
-std::vector<std::shared_ptr<SwarmAgent>> EnvironmentManager::GetAgentList(){ return agentList; }
+std::vector<SwarmAgent>* EnvironmentManager::GetAgentList(){ return &agentList; }
 
-std::vector<std::shared_ptr<SwarmAgent>> EnvironmentManager::GetNeighborhood(uint agentIdx){
-    std::vector<std::shared_ptr<SwarmAgent>> neighborhood;
-    neighborhood.resize(laplacian(agentIdx,agentIdx)); // Diagonal of Laplacian indicates neighborhood size for that agent
+// std::vector<std::shared_ptr<SwarmAgent>> EnvironmentManager::GetNeighborhood(uint agentIdx){
+//     std::vector<std::shared_ptr<SwarmAgent>> neighborhood;
+//     neighborhood.resize(laplacian(agentIdx,agentIdx)); // Diagonal of Laplacian indicates neighborhood size for that agent
+    
+//     // Identify the Agents who are neighbors with agentIdx
+//     uint idx = 0;
+//     for (uint j = 0; j < numAgents; j++){ 
+//         if (j != agentIdx){
+//             if (laplacian(agentIdx,j) != 0){
+//                 neighborhood.at(idx) = agentList[j];
+//                 idx++;
+//             }
+//         }
+//     }
+
+//     return neighborhood;
+// }
+
+void EnvironmentManager::SimulateSensor(uint agentIdx){
+    std::vector<Eigen::Matrix4d> poseData;
+    std::vector<double> speedData;
+    // Diagonal of Laplacian indicates neighborhood size for that agent
+    // Use this to resize data vectors
+    uint neighborhoodSize = laplacian(agentIdx,agentIdx);
+    poseData.resize(neighborhoodSize); 
+    speedData.resize(neighborhoodSize);
     
     // Identify the Agents who are neighbors with agentIdx
     uint idx = 0;
     for (uint j = 0; j < numAgents; j++){ 
         if (j != agentIdx){
             if (laplacian(agentIdx,j) != 0){
-                neighborhood.at(idx) = agentList[j];
+                poseData.at(idx) = agentList[j].GetCurrentPose();
+                speedData.at(idx) = agentList[j].GetCurrentSpeed();
                 idx++;
             }
         }
     }
-    return neighborhood;
+    // Update Sensor
+    agentList[agentIdx].sensor.SetSensorData(poseData,speedData);
 }
 
 Eigen::MatrixXi EnvironmentManager::ComputeLaplacian(){
@@ -42,10 +73,10 @@ Eigen::MatrixXi EnvironmentManager::ComputeLaplacian(){
         neighborhoodSize = 0;
         for(uint k = 0; k < numAgents; k++){
             if (j != k){
-                rjk = agentList[j]->GetCurrentPosition() - agentList[k]->GetCurrentPosition();
+                rjk = agentList[j].GetCurrentPosition() - agentList[k].GetCurrentPosition();
 
                 // Check to see if agent k is inside agent j's sensing range
-                if (rjk.norm() < agentList[j]->sensor.GetSensorRange()){
+                if (rjk.norm() < agentList[j].GetSensingRange()){
                     adjMat(j,k) = 1;
                     neighborhoodSize++;  // Agent k is a neighbor of agent j
                 } else {
