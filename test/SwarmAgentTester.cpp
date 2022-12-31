@@ -212,7 +212,48 @@ TEST_F(SwarmAgentTest, GetBinormalTest){
 }
 
 TEST_F(SwarmAgentTest, NormalizationTest){
-    std::cout << "Finish me!!!!" << std::endl;
+    // std::cout << "Finish me!!!!" << std::endl;
+    Eigen::Matrix3d testDCM;
+    // Perfect dcm
+    Eigen::AngleAxisd aa = Eigen::AngleAxisd(0.25*M_PI, Eigen::Vector3d::UnitZ());
+    Eigen::Quaterniond q = Eigen::Quaterniond(aa);
+    testDCM = q.matrix();
+    // Near orthogonal dcm
+    testDCM = testDCM * sqrt(1.05);
+
+    // Normalize Matrix test
+    EXPECT_GT(testDCM.determinant()-1,unitUTOL);
+    agent1.NormalizeAttMat(testDCM);
+    EXPECT_LT(testDCM.determinant()-1,unitLTOL);
+}
+
+TEST_F(SwarmAgentTest, SetAttitudeLogicTest){
+    Eigen::Matrix3d testDCM1, testDCM2, testDCM3;
+    // Perfect dcm
+    Eigen::AngleAxisd aa = Eigen::AngleAxisd(0.25*M_PI, Eigen::Vector3d::UnitZ());
+    Eigen::Quaterniond q = Eigen::Quaterniond(aa);
+    testDCM1 = q.matrix();
+    // Near orthogonal dcm
+    testDCM2 = testDCM1 * sqrt(1.0000001);
+    // Outside normalization range
+    testDCM3 = testDCM1 * 1.01;
+    
+    // Test Input 1 should be within lower normalization threshold.
+    EXPECT_NEAR(testDCM2.determinant(),1,unitLTOL);
+    // Test Input 2 should be within upper normalization treshold, but not perfect.
+    EXPECT_NEAR(testDCM2.determinant(),1,unitUTOL);
+    // Test Input 3 should be outside normalization range.
+    EXPECT_GT(testDCM3.determinant(),1);
+    
+    // Test Input 1 should be exactly equal
+    agent1.SetCurrentAttitude(testDCM1);
+    EXPECT_EQ(agent1.GetCurrentAttitude(),testDCM1);
+    // Test Input 2 should be accepted and normalized.
+    agent1.SetCurrentAttitude(testDCM2);
+    EXPECT_NEAR(agent1.GetCurrentAttitude().determinant(),testDCM2.determinant(),unitUTOL);
+    // Test Input 3 should be rejected
+    agent1.SetCurrentAttitude(testDCM3);
+    EXPECT_NE(agent1.GetCurrentAttitude(),testDCM1);
 }
 
 // *****************************************************************************************************
