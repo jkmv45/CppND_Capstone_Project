@@ -12,9 +12,7 @@
 // Define Generic Simulation Object Parent Class
 class SimObj {
     public:
-    // virtual void Simulate() = 0;
-
-     // Methods
+    // Methods
     Eigen::Matrix3d skewSymmetric(Eigen::Vector3d&);
 
     // Getters

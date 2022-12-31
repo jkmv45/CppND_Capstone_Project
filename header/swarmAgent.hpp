@@ -21,7 +21,8 @@ struct VehicleParams{
     double opAlt;           // Operational Altitude [m]
 
     // Generic UAV Initializer List
-    VehicleParams() : mass(20), cruiseSpeed(10), maxSpeed(25), senseRadius(150), wingSpan(2), turnRadius(10), maxRange(5E5), maxAlt(5000), opAlt(2000){};
+    VehicleParams() :   mass(20), cruiseSpeed(10), maxSpeed(25), senseRadius(150), wingSpan(2), 
+                        turnRadius(10), maxRange(5E5), maxAlt(5000), opAlt(2000){};
 };
 
 struct ControlParams{
@@ -36,19 +37,9 @@ struct ControlParams{
     double eAPF;                // Wingspan Multiplier for APF Shaping (factor of safety)
     double c0APF;               // Integration constant for APF
 
-    // Contructor w/ Default Params
-    ControlParams(){
-        gainAPF = {0.5, 0, 0.001, 0.001};
-        gainCons = {5, 0, 1, 1};
-        gainObj = {0.006, 0, 0.001, 0.001};
-        maxU = {5, 1, 2, 2};
-        damping = 6.0;    
-        aAPF = 2;
-        bAPF = 0;
-        cAPF = 40;
-        eAPF = 10;
-        c0APF = 0;
-    }
+    // Default Control Params Initializer List
+    ControlParams()  :  gainAPF({0.5, 0, 0.001, 0.001}), gainCons({5, 0, 1, 1}), gainObj({0.006, 0, 0.001, 0.001}), maxU({5, 1, 2, 2}),damping(6.0), 
+                        aAPF(2), bAPF(0), cAPF(40), eAPF(10), c0APF(0) {};
 };
 
 enum AgentRole {leader,follower};
@@ -58,21 +49,16 @@ class SwarmAgent : public SimObj {
     // Attributes
     double dt;          // Sample Time [s]
     double jFlock;      // Potential Energy related to Flocking (for Lyapunov Fcn computation)
-    AgentRole myRole;   // This agents role in the swarm (leader or follower) 
-    // Objects
-    Sensor sensor;
+    AgentRole myRole;   // This agents role in the swarm (leader or follower) ***(Future upgrade)***
+    Sensor sensor;      // Agent's sensor for nearby agent's pose and speed
 
     // Constructor
-    // swarmAgent(agentRole role, double tstep) : myRole(role), dt(tstep) {}
     SwarmAgent(){};
     SwarmAgent(AgentRole, double, uint);
 
     // Methods
     void Simulate();
     double GetSensingRange();
-    // Eigen::Matrix4d GetCurrentPose();
-    // Eigen::Vector3d GetCurrentAngVel();
-    // double GetCurrentSpeed();
 
     private:
     // Attributes
@@ -81,18 +67,10 @@ class SwarmAgent : public SimObj {
     ControlParams ctrlParams;
     // Vectors
     Eigen::Vector4d inputU;     // Control input vector for agent controller
-    // Eigen::Vector3d tanVecT;    // Unit vector indicating forward direction along path
-    // Eigen::Vector3d normVecN;   // Unit vector indicating normal direction along path
-    // Eigen::Vector3d bnormVecB;  // Unit vector creating right hand system with tanVecT and normVecN (i.e. T x N)
-    // Eigen::Vector3d posVecR;    // Current position of agent [m]
-    // Eigen::Vector3d angVel;     // Current angular velocity of agent [rad/s]
     // Scalars
-    // double fwdSpd;              // Current forward speed of agent [m/s]
     uint numAgents;
 
     // Methods
-    // Eigen::Matrix4d senseNeighborPose(swarmAgent* neighbor);
-    // Eigen::Vector4d senseNeighborVel(swarmAgent* neighbor);
     void ComputeControlInputs();
     void PropagateStates();
     Eigen::Vector2d ComputeAPF(double);

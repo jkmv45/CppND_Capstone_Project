@@ -2,6 +2,7 @@
 #include <iostream>
 #include <memory>
 #include <array>
+#include <random>
 
 // Third Party
 #include "gtest/gtest.h"
@@ -18,9 +19,9 @@ class SwarmAgentTest : public ::testing::Test{
     protected:
     SwarmAgentTest() {
         uint numAgents = 2;
-        double timestep = 0.01;
-        this -> agent1 = SwarmAgent(AgentRole::leader,timestep,numAgents);
-        this -> agent2 = SwarmAgent(AgentRole::follower,timestep,numAgents);
+        double timeStep = 0.01;
+        this -> agent1 = SwarmAgent(AgentRole::leader,timeStep,numAgents);
+        this -> agent2 = SwarmAgent(AgentRole::follower,timeStep,numAgents);
         this -> testDCM = Eigen::Matrix3d::Identity();
         this -> vParams = VehicleParams();
         this -> cParams = ControlParams();
@@ -39,65 +40,110 @@ class SwarmAgentTest : public ::testing::Test{
 class EnvironmentTest : public ::testing::Test{
     protected:
     EnvironmentTest() {
-        uint numAgents = 3;
-        double timestep = 0.01;
-        double range = 100;
-        simAgents.push_back(SwarmAgent(AgentRole::leader,timestep,numAgents));
-        simAgents.push_back(SwarmAgent(AgentRole::follower,timestep,numAgents));
-        simAgents.push_back(SwarmAgent(AgentRole::follower,timestep,numAgents));
-        env = EnvironmentManager(simAgents);
+        this -> numAgents = 3;
+        double timeStep = 0.01;
+        this -> env = EnvironmentManager(numAgents, timeStep);
+        this -> mySwarmPtr = env.GetAgentList();
+        this -> v1 = {1, 2, 3};
+        this -> v2 = v1;
+        this -> v3 = v1;
+        this -> t1 = Eigen::Matrix4d::Identity(); 
+        this -> t2 = Eigen::Matrix4d::Identity();
+        this -> t3 = Eigen::Matrix4d::Identity(); 
+        double senseRange = mySwarmPtr->at(0).GetSensingRange();
+
+        // Setup RNG
+        this -> udInside = std::uniform_real_distribution(0.5*senseRange+1.0, senseRange-1.0);
+        this -> udOutside = std::uniform_real_distribution(senseRange, 2.0*senseRange);
     }
 
     EnvironmentManager env;
-    std::vector<SwarmAgent> simAgents;
+    uint numAgents;
+    std::vector<SwarmAgent>* mySwarmPtr;
+    std::vector<Eigen::Matrix4d> initCond;
+    Eigen::Vector3d v1;
+    Eigen::Vector3d v2;
+    Eigen::Vector3d v3;
+    Eigen::Matrix4d t1;
+    Eigen::Matrix4d t2;
+    Eigen::Matrix4d t3;
+
+    std::uniform_real_distribution<double> udInside;
+    std::uniform_real_distribution<double> udOutside;
 };
 
 class IntegrationTests : public ::testing::Test{
     protected:
     IntegrationTests() {
+        // Simulation Parameters
         this -> numAgents = 2;
-        this -> timestep = 0.01;
-
-        // Set Initial Conditions of each Agent
-        Eigen::Matrix3d rotMat = Eigen::Matrix3d::Identity();
-        Eigen::Vector3d v1 = {1, 2, 3};
-        Eigen::Vector3d v2 = v1;
-        v2.x() += 25; // Inside sensing radius, close to rmin
-        Eigen::Matrix4d t1 = Eigen::Matrix4d::Identity(); 
-        Eigen::Matrix4d t2 = Eigen::Matrix4d::Identity();
-        t1.block<3,3>(0,0) = rotMat;
-
-        // Set t2 to a slightly different attitude
-        Eigen::AngleAxisd aa = Eigen::AngleAxisd(0.1*M_PI, Eigen::Vector3d::UnitZ());
-        Eigen::Quaterniond q = Eigen::Quaterniond(aa);
-        rotMat = q.matrix();
-
-        t2.block<3,3>(0,0) = rotMat;
-
-        t1.block<3,1>(0,3) = v1;
-        t2.block<3,1>(0,3) = v2;
-
-        std::vector<SwarmAgent> simAgentList;
-        simAgentList.reserve(numAgents);
-        for (uint i = 0; i < numAgents; i++){
-            simAgentList.push_back(SwarmAgent(AgentRole::follower,timestep,numAgents));
-        }
-
-        simAgentList[0].SetCurrentPose(t1);
-        simAgentList[1].SetCurrentPose(t2);
-        
-        env = EnvironmentManager(simAgentList);
+        this -> timeStep = 0.01;
+        // Simulation Setup
+        env = EnvironmentManager(numAgents, timeStep);
+        this -> mySwarmPtr = env.GetAgentList();
         this -> vParams = VehicleParams();
         this -> cParams = ControlParams();
+        this -> rmin = vParams.wingSpan * cParams.eAPF;
+
+        // Setup RNG
+        double senseRange = vParams.senseRadius;
+        std::random_device rd;
+        std::mt19937 rng(rd());
+        this->udAttraction = std::uniform_real_distribution(rmin, senseRange-1.0);
+        this->udRepulsion = std::uniform_real_distribution(vParams.wingSpan+1.0, rmin);
+        this->udAngle = std::uniform_real_distribution(-0.5*M_PI, 0.5*M_PI);
+
+        // Create Initial Conditions
+        Eigen::Vector3d rvec, uvec = Eigen::Vector3d::Zero();
+        Eigen::Matrix4d pose = Eigen::Matrix4d::Identity();
+        Eigen::Matrix3d dcm = Eigen::Matrix3d::Identity();
+        Eigen::AngleAxisd aa;
+        Eigen::Quaterniond quat;
+        this -> initCond.resize(numAgents);
+        for(uint i = 0; i < numAgents; i++){
+            // Set Position Vector
+            uvec.x() = udUnitVec(rng);
+            uvec.y() = udUnitVec(rng);
+            uvec.z() = udUnitVec(rng);
+            uvec.normalize();
+            rvec = uvec * udAttraction(rng);
+            // Set Rotation Matrix
+            aa = Eigen::AngleAxisd(udAngle(rng), uvec);
+            quat = Eigen::Quaterniond(aa);
+            dcm = quat.matrix();
+            // Build Pose
+            pose.block<3,3>(0,0) = dcm;
+            pose.block<3,1>(0,3) = rvec;
+            // Add Pose to IC Vector
+            this -> initCond.at(i) = pose;
+        }
+        env.Init(initCond);
     }
 
     // void TearDown() override {}
+
+    // Simulation Variables
+    uint numAgents;
+    double timeStep;
     VehicleParams vParams;
     ControlParams cParams;
     EnvironmentManager env;
-    // std::vector<SwarmAgent> simAgentList;
-    uint numAgents;
-    double timestep;
+    std::vector<SwarmAgent>* mySwarmPtr;
+    std::vector<Eigen::Matrix4d> initCond;
+
+    // Test Criteria
+    double rmin;                // Minimum Separation Distance
+    double const rtol = 2.0;    // Separation Consensus Tolerance
+    double const htol = 0.1;    // Heading Consensus Tolerance
+    double const ptol = 0.1;    // Pitch Consensus Tolerance
+    double const spdtol = 1.0;  // Speed Consensus Tolerance
+    
+    // RNG Variables
+    std::mt19937 rng;
+    std::uniform_real_distribution<double> udUnitVec;
+    std::uniform_real_distribution<double> udAttraction;
+    std::uniform_real_distribution<double> udRepulsion;
+    std::uniform_real_distribution<double> udAngle;
 };
 
 // *************************************** Test Suite Definitions **************************************
@@ -165,6 +211,10 @@ TEST_F(SwarmAgentTest, GetBinormalTest){
     EXPECT_EQ(agent1.GetBinormalVec(testDCM), tvec);
 }
 
+TEST_F(SwarmAgentTest, NormalizationTest){
+    std::cout << "Finish me!!!!" << std::endl;
+}
+
 // *****************************************************************************************************
 // ******************************************* Sensor Tests ********************************************
 // *****************************************************************************************************
@@ -206,33 +256,66 @@ TEST(SensorTest, StatusFlagTest){
 // ***************************************** Environment Tests *****************************************
 // *****************************************************************************************************
 TEST_F(EnvironmentTest, ConstructorTest){
-    EXPECT_EQ(env.numAgents, simAgents.size());
-    // EXPECT_EQ(env.GetAgentList(), simAgents);
+    EXPECT_EQ(env.numAgents, env.GetAgentList()->size());
+    EXPECT_EQ(env.numAgents, numAgents);
 }
 
-TEST_F(EnvironmentTest, ConnectedGraphTest){
-    Eigen::Matrix3d rotMat = Eigen::Matrix3d::Identity();
-    Eigen::Vector3d v1 = {1, 2, 3};
-    Eigen::Vector3d v2 = v1;
-    Eigen::Vector3d v3 = v1;
-    v2.x() += 149; // Inside sensing radius
-    v3.x() += 151; // Outside sensing radius
-    Eigen::Matrix4d t1 = Eigen::Matrix4d::Identity(); 
-    Eigen::Matrix4d t2 = Eigen::Matrix4d::Identity();
-    Eigen::Matrix4d t3 = Eigen::Matrix4d::Identity(); 
-
-    t1.block<3,3>(0,0) = rotMat;
-    t2.block<3,3>(0,0) = rotMat;
-    t3.block<3,3>(0,0) = rotMat;
-
+TEST_F(EnvironmentTest, InitValidTest){
+    std::random_device rd;
+    std::mt19937 rng(rd());
+    // Set Initial Conditions
+    v1.x() += udInside(rng); // Inside sensing radius
+    v3.x() -= udInside(rng); // Outside sensing radius
     t1.block<3,1>(0,3) = v1;
     t2.block<3,1>(0,3) = v2;
     t3.block<3,1>(0,3) = v3;
 
-    std::vector<SwarmAgent>* mySwarmPtr = env.GetAgentList();
-    mySwarmPtr->at(0).SetCurrentPose(t1);
-    mySwarmPtr->at(1).SetCurrentPose(t2);
-    mySwarmPtr->at(2).SetCurrentPose(t3);
+    std::vector<Eigen::Matrix4d> ic;
+    ic.push_back(t1);
+    ic.push_back(t2);
+    ic.push_back(t3);
+
+    env.Init(ic);
+
+    EXPECT_EQ(mySwarmPtr->at(0).GetCurrentPose(),t1);
+    EXPECT_EQ(mySwarmPtr->at(1).GetCurrentPose(),t2);
+    EXPECT_EQ(mySwarmPtr->at(2).GetCurrentPose(),t3);
+}
+
+TEST_F(EnvironmentTest, InitInvalidTest){
+    std::random_device rd;
+    std::mt19937 rng(rd());
+    // Set Initial Conditions
+    v2.x() += udInside(rng); // Inside sensing radius
+    t1.block<3,1>(0,3) = v1;
+    t2.block<3,1>(0,3) = v2;
+
+    std::vector<Eigen::Matrix4d> ic;
+    ic.push_back(t1);
+    ic.push_back(t2);
+
+    env.Init(ic);
+
+    EXPECT_NE(mySwarmPtr->at(0).GetCurrentPose(),t1);
+    EXPECT_NE(mySwarmPtr->at(1).GetCurrentPose(),t2);
+}
+
+TEST_F(EnvironmentTest, ConnectedGraphTest){
+    std::random_device rd;
+    std::mt19937 rng(rd());
+    // Set Initial Conditions
+    v1.x() += udInside(rng); // Inside sensing radius
+    v3.x() -= udInside(rng); // Outside sensing radius
+    t1.block<3,1>(0,3) = v1;
+    t2.block<3,1>(0,3) = v2;
+    t3.block<3,1>(0,3) = v3;
+
+    std::vector<Eigen::Matrix4d> ic;
+    ic.push_back(t1);
+    ic.push_back(t2);
+    ic.push_back(t3);
+
+    env.Init(ic);
 
     Eigen::MatrixXi testLaplacian;
     testLaplacian.resize(3,3);
@@ -243,6 +326,7 @@ TEST_F(EnvironmentTest, ConnectedGraphTest){
     Eigen::MatrixXi laplacian = env.ComputeLaplacian();
     EXPECT_EQ(laplacian,testLaplacian);
 
+    // Check Poses
     env.SimulateSensor(0);
     env.SimulateSensor(1);
     env.SimulateSensor(2);
@@ -260,28 +344,20 @@ TEST_F(EnvironmentTest, ConnectedGraphTest){
 }
 
 TEST_F(EnvironmentTest, DisconnectedGraphTest){
-    Eigen::Matrix3d rotMat = Eigen::Matrix3d::Identity();
-    Eigen::Vector3d v1 = {1, 2, 3};
-    Eigen::Vector3d v2 = v1;
-    Eigen::Vector3d v3 = v1;
-    v2.x() += 151; // Outside sensing radius
-    v3.x() -= 151; // Outside sensing radius
-    Eigen::Matrix4d t1 = Eigen::Matrix4d::Identity(); 
-    Eigen::Matrix4d t2 = Eigen::Matrix4d::Identity();
-    Eigen::Matrix4d t3 = Eigen::Matrix4d::Identity(); 
-
-    t1.block<3,3>(0,0) = rotMat;
-    t2.block<3,3>(0,0) = rotMat;
-    t3.block<3,3>(0,0) = rotMat;
-
+    std::random_device rd;  
+    std::mt19937 rng(rd());
+    v2.x() += udOutside(rng); // Outside sensing radius
+    v3.x() -= udOutside(rng); // Outside sensing radius 
     t1.block<3,1>(0,3) = v1;
     t2.block<3,1>(0,3) = v2;
     t3.block<3,1>(0,3) = v3;
 
-    std::vector<SwarmAgent>* mySwarmPtr = env.GetAgentList();
-    mySwarmPtr->at(0).SetCurrentPose(t1);
-    mySwarmPtr->at(1).SetCurrentPose(t2);
-    mySwarmPtr->at(2).SetCurrentPose(t3);
+    std::vector<Eigen::Matrix4d> ic;
+    ic.push_back(t1);
+    ic.push_back(t2);
+    ic.push_back(t3);
+
+    env.Init(ic);
 
     Eigen::MatrixXi testLaplacian;
     testLaplacian.resize(3,3);
@@ -306,69 +382,49 @@ TEST_F(EnvironmentTest, DisconnectedGraphTest){
 // ***************************************** Integration Tests *****************************************
 // *****************************************************************************************************
 TEST_F(IntegrationTests, N2_AttractionAPF_Test){  
-    // Declare and Allocate Time Histories
-    uint const numSteps = 1000;
-    uint const numVeh = 2;
-    Eigen::VectorXd timeVec = Eigen::VectorXd::LinSpaced(numSteps,0,timestep*numSteps);
-    // Declare Data Arrays
-    std::array<std::array<double,numVeh>,numSteps> speedHist;
-    // Note, doing this for now b/c I am only testing 2 agents
-    // TODO: Update to handle N agents
-    std::array<double,numSteps> relDistHist, relHeadingHist, detCheck;
-    std::array<std::array<Eigen::Matrix4d,numVeh>,numSteps> poseHist;
-    std::array<std::array<Eigen::Vector3d,numVeh>,numSteps> angvelHist;
-    // Initialize Data Arrays
-    std::array<double,numVeh> initSpeed;
-    std::array<Eigen::Matrix4d,numVeh> initPose;
-    std::array<Eigen::Vector3d,numVeh> initAngVel;
-    initSpeed.fill(0);
-    initPose.fill(Eigen::Matrix4d::Identity());
-    initAngVel.fill(Eigen::Vector3d::Zero());
-    relDistHist.fill(0);
-    relHeadingHist.fill(0);
-    speedHist.fill(initSpeed);
-    poseHist.fill(initPose);
-    angvelHist.fill(initAngVel);
-
-    // Intermediate Variables
-    double newSpeed, newDeltaR, newRelHeading = 0;
-    Eigen::Matrix4d newPose;
-    Eigen::Vector3d newAngVel;
-    Eigen::Matrix3d a1Att, a2Att;
-    Eigen::Vector3d a1Heading, a2Heading;
-
-    std::vector<SwarmAgent>* simAgentList = env.GetAgentList();
+    // Estimate number of simulation steps needed to reach terminal conditions
+    env.ComputeRelativeStates();
+    double timeEst = 1.1 * (env.relativePositions[0] - rmin) * vParams.cruiseSpeed;
+    uint const numSteps = (uint)(timeEst/timeStep);
+    Eigen::VectorXd timeVec = Eigen::VectorXd::LinSpaced(numSteps,0,timeStep*numSteps);
+    // Initialize Relative State Histories
+    std::vector<std::vector<double>> relDistHist(env.numRelStates,std::vector<double>(numSteps,0));
+    std::vector<std::vector<double>> relSpeedHist(env.numRelStates,std::vector<double>(numSteps,0));
+    std::vector<std::vector<double>> relHeadingHist(env.numRelStates,std::vector<double>(numSteps,0));
+    
+    // Run Simulation
     for (uint ti = 0; ti < numSteps; ti++){
-        // Run a Simluation Step
+        // Simulate Swarm
         env.Simulate();
-        
-        newDeltaR = (simAgentList->at(0).GetCurrentPosition() - simAgentList->at(1).GetCurrentPosition()).norm();
-        a1Att = simAgentList->at(0).GetCurrentAttitude();
-        a2Att = simAgentList->at(1).GetCurrentAttitude();
-        a1Heading = simAgentList->at(0).GetTangentVec(a1Att);
-        a2Heading = simAgentList->at(1).GetTangentVec(a2Att);
-        newRelHeading = a1Heading.dot(a2Heading);
-
-        relDistHist[ti] = newDeltaR;
-        relHeadingHist[ti] = newRelHeading;
-        detCheck[ti] = a1Att.determinant();
+        // Log Relative States
+        env.ComputeRelativeStates();
+        for(uint pi = 0; pi < env.numRelStates; pi++){
+            relDistHist[pi][ti] = env.relativePositions[pi];
+            relSpeedHist[pi][ti] = env.relativeSpeeds[pi];
+            relHeadingHist[pi][ti] = env.relativeHeadings[pi];
+            // Relative distance must always be greater than the wingspan of a single vehicle
+            EXPECT_GT(relDistHist[pi][ti], vParams.wingSpan);
+        }
     }
+
     // End of Sim Assertions
-    // Check that relative position and heading have decreased
-    double rmin = vParams.wingSpan * cParams.eAPF;
-    EXPECT_LT(relDistHist[numSteps-1] ,relDistHist[0]);
-    EXPECT_NEAR(relDistHist[numSteps-1],rmin,0.1);
-    EXPECT_NEAR(relHeadingHist[numSteps-1],1,1e-6);
+    // Check that relative position, speed, and heading have decreased and are in spec
+    for(uint pi = 0; pi < env.numRelStates; pi++){
+        EXPECT_LT(relDistHist[pi][numSteps-1], relDistHist[pi][0]);
+        EXPECT_NEAR(relDistHist[pi][numSteps-1], rmin, rtol);
+        EXPECT_NEAR(relSpeedHist[pi][numSteps-1],0,spdtol);
+        EXPECT_NEAR(relHeadingHist[pi][numSteps-1], 1 ,htol);
+    }
 
     // Plot Results
     std::vector<double> tvec;
     tvec.resize(timeVec.size());
     Eigen::Map<Eigen::VectorXd>(tvec.data(), tvec.size()) = timeVec;
+    // Only two agents for this test so lets just extract the first element
+    std::vector<double> drvec = relDistHist[0];
+    std::vector<double> dhvec = relHeadingHist[0];
+    std::vector<double> dsvec = relSpeedHist[0];
 
-    std::vector<double> drvec(relDistHist.begin(),relDistHist.end());
-    std::vector<double> dhvec(relHeadingHist.begin(),relHeadingHist.end());
-    std::vector<double> detChk(detCheck.begin(),detCheck.end());
-    
     plt::figure(1);
     plt::plot(tvec, drvec, "bo-");
     plt::title("Relative States over Time");
@@ -385,10 +441,10 @@ TEST_F(IntegrationTests, N2_AttractionAPF_Test){
     plt::grid(true);
 
     plt::figure(3);
-    plt::plot(tvec, detChk, "go-");
-    plt::title("Agent 1 Determinant over Time");
+    plt::plot(tvec, dsvec, "ko-");
+    plt::title("Relative Speed over Time");
     plt::xlabel("Time [s]");
-    plt::ylabel("Determinant [UL]");
+    plt::ylabel("Relative Speed [m/s]");
     plt::grid(true);
     plt::show();
 }

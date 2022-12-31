@@ -11,7 +11,6 @@ SwarmAgent::SwarmAgent(AgentRole role, double tstep, uint numVeh){
     this -> pose = Eigen::Matrix4d::Identity();
     this -> angVel = {0, 0, 0};
     this -> fwdSpd = vehParams.cruiseSpeed;
-    // this -> sensor = Sensor(vehParams.senseRadius);
     this -> sensor = Sensor();
     this -> numAgents = numVeh;
     // Compute APF Coefficient b
@@ -22,58 +21,29 @@ SwarmAgent::SwarmAgent(AgentRole role, double tstep, uint numVeh){
     this -> ctrlParams.c0APF = minAPF[1];
 }
 
+// TODO Add copy constructors and move constructors
+
 // Public Methods
 void SwarmAgent::Simulate(){
-    // std::cout << "Step 1" << std::endl;
     ComputeControlInputs();
-    // std::cout << "Step 2" << std::endl;
     PropagateStates();
-    // std::cout << "Step 3" << std::endl;
 }
 
+// Getters
 double SwarmAgent::GetSensingRange(){
     return vehParams.senseRadius;
 }
 
-// Getters
-// Eigen::Matrix4d SwarmAgent::GetCurrentPose(){
-//     Eigen::Matrix4d pose = Eigen::Matrix4d::Identity();
-//     Eigen::Matrix3d rotm;
-//     rotm << tanVecT, normVecN, bnormVecB;
-//     pose.topLeftCorner(3,3) = rotm;
-//     pose.block<3,1>(0,3) << posVecR.x(), posVecR.y(), posVecR.z();
-//     return pose;
-// }
-
-// Eigen::Vector3d SwarmAgent::GetCurrentAngVel(){
-//     return angVel;
-// }
-
-// double SwarmAgent::GetCurrentSpeed(){
-//     return fwdSpd;
-// }
 
 // Private Methods
-// Eigen::Matrix4d SwarmAgent::SenseNeighborPose(SwarmAgent* neighbor){
-//     return neighbor->GetCurrentPose();
-// }
-
-// Eigen::Vector4d SwarmAgent::SenseNeighborVel(SwarmAgent* neighbor){
-//     Eigen::Vector4d vvec;
-//     vvec[0] = neighbor->GetCurrentSpeed();
-//     vvec.block<1,3>(0,1) << neighbor->GetCurrentAngVel();
-//     return vvec;
-// }
-
 void SwarmAgent::ComputeControlInputs(){
-    // Poll Sensor for Neighboring Agents
-    // sensor.SamplePoseSensor();
-    // sensor.SampleRateSensor();
+    // Poll Sensor for Neighboring Agent Pose and Speed
     std::vector<Eigen::Matrix4d> poseData = sensor.GetPoseData();
     std::vector<double> speedData = sensor.GetSpeedData();
 
     if (poseData.size() != speedData.size()){
         // Error State TODO
+        std::cout << "Error: Sensor pose and speed data are not the same size" << std::endl;
     }
 
     // Define Nominal Gain
@@ -154,9 +124,7 @@ void SwarmAgent::ComputeControlInputs(){
 
     // TODO: Apply Saturation Logic
 
-    // Eigen::Vector4d u = {u1, u2, u3, u4};
     inputU = {u1, u2, u3, u4};
-    // return u;
 }
 
 void SwarmAgent::PropagateStates(){

@@ -3,6 +3,7 @@
 #include <cmath>
 #include <memory>
 #include <vector>
+#include <iostream>
 
 #include "eigen3/Eigen/Geometry"
 
@@ -13,25 +14,23 @@ class EnvironmentManager {
     public:
     // Attributes
     uint numAgents{1};
+    uint numRelStates{1};
+    std::vector<double> relativePositions, relativeHeadings, relativeSpeeds;
 
     // Methods
+    void Init(std::vector<Eigen::Matrix4d>);
     void Simulate();
     Eigen::MatrixXi ComputeLaplacian();
-    // std::vector<std::shared_ptr<SwarmAgent>> GetNeighborhood(uint);
     void SimulateSensor(uint);
-    // std::vector<std::shared_ptr<SwarmAgent>> GetAgentList();
     std::vector<SwarmAgent>* GetAgentList();
+    void ComputeRelativeStates();
 
     // Constructor
-    EnvironmentManager() {};
-    // EnvironmentManager(std::vector<std::shared_ptr<SwarmAgent>> agents) : agentList(agents), numAgents(agents.size()), laplacian(Eigen::MatrixXi::Zero(agents.size(),agents.size())) {};
-    EnvironmentManager(std::vector<SwarmAgent> agents) : agentList(agents), numAgents(agents.size()), laplacian(Eigen::MatrixXi::Zero(agents.size(),agents.size())) {};
+    EnvironmentManager(){};
+    EnvironmentManager(uint, double);
 
     private:
     // Attributes
     Eigen::MatrixXi laplacian;
-    // std::vector<std::shared_ptr<SwarmAgent>> agentList;
     std::vector<SwarmAgent> agentList;
-
-    // Methods
 };
