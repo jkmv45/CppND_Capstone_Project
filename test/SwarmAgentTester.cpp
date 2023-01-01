@@ -94,30 +94,12 @@ class IntegrationTests : public ::testing::Test{
         this->udAngle = std::uniform_real_distribution(-0.5*M_PI, 0.5*M_PI);
 
         // Create Initial Conditions
-        Eigen::Vector3d rvec, uvec = Eigen::Vector3d::Zero();
-        Eigen::Matrix4d pose = Eigen::Matrix4d::Identity();
-        Eigen::Matrix3d dcm = Eigen::Matrix3d::Identity();
-        Eigen::AngleAxisd aa;
-        Eigen::Quaterniond quat;
+        this -> rvec, uvec = Eigen::Vector3d::Zero();
+        this -> pose = Eigen::Matrix4d::Identity();
+        this -> dcm = Eigen::Matrix3d::Identity();
+        this -> aa;
+        this -> quat;
         this -> initCond.resize(numAgents);
-        for(uint i = 0; i < numAgents; i++){
-            // Set Position Vector
-            uvec.x() = udUnitVec(rng);
-            uvec.y() = udUnitVec(rng);
-            uvec.z() = udUnitVec(rng);
-            uvec.normalize();
-            rvec = uvec * udAttraction(rng);
-            // Set Rotation Matrix
-            aa = Eigen::AngleAxisd(udAngle(rng), uvec);
-            quat = Eigen::Quaterniond(aa);
-            dcm = quat.matrix();
-            // Build Pose
-            pose.block<3,3>(0,0) = dcm;
-            pose.block<3,1>(0,3) = rvec;
-            // Add Pose to IC Vector
-            this -> initCond.at(i) = pose;
-        }
-        env.Init(initCond);
     }
 
     // void TearDown() override {}
@@ -130,6 +112,12 @@ class IntegrationTests : public ::testing::Test{
     EnvironmentManager env;
     std::vector<SwarmAgent>* mySwarmPtr;
     std::vector<Eigen::Matrix4d> initCond;
+
+    Eigen::Vector3d rvec, uvec;
+    Eigen::Matrix4d pose;
+    Eigen::Matrix3d dcm;
+    Eigen::AngleAxisd aa;
+    Eigen::Quaterniond quat;
 
     // Test Criteria
     double rmin;                // Minimum Separation Distance
@@ -423,6 +411,25 @@ TEST_F(EnvironmentTest, DisconnectedGraphTest){
 // ***************************************** Integration Tests *****************************************
 // *****************************************************************************************************
 TEST_F(IntegrationTests, N2_AttractionAPF_Test){  
+    // Set Initial Conditions
+    for(uint i = 0; i < numAgents; i++){
+        // Set Position Vector
+        uvec.x() = udUnitVec(rng);
+        uvec.y() = udUnitVec(rng);
+        uvec.z() = udUnitVec(rng);
+        uvec.normalize();
+        rvec = uvec * udAttraction(rng);
+        // Set Rotation Matrix
+        aa = Eigen::AngleAxisd(udAngle(rng), uvec);
+        quat = Eigen::Quaterniond(aa);
+        dcm = quat.matrix();
+        // Build Pose
+        pose.block<3,3>(0,0) = dcm;
+        pose.block<3,1>(0,3) = rvec;
+        // Add Pose to IC Vector
+        initCond.at(i) = pose;
+    }
+    env.Init(initCond);
     // Estimate number of simulation steps needed to reach terminal conditions
     env.ComputeRelativeStates();
     double timeEst = 1.1 * (env.relativePositions[0] - rmin) * vParams.cruiseSpeed;
@@ -452,6 +459,95 @@ TEST_F(IntegrationTests, N2_AttractionAPF_Test){
     // Check that relative position, speed, and heading have decreased and are in spec
     for(uint pi = 0; pi < env.numRelStates; pi++){
         EXPECT_LT(relDistHist[pi][numSteps-1], relDistHist[pi][0]);
+        EXPECT_NEAR(relDistHist[pi][numSteps-1], rmin, rtol);
+        EXPECT_NEAR(relSpeedHist[pi][numSteps-1],0,spdtol);
+        EXPECT_NEAR(relHeadingHist[pi][numSteps-1], 1 ,htol);
+    }
+
+    // Plot Results
+    std::vector<double> tvec;
+    tvec.resize(timeVec.size());
+    Eigen::Map<Eigen::VectorXd>(tvec.data(), tvec.size()) = timeVec;
+    // Only two agents for this test so lets just extract the first element
+    std::vector<double> drvec = relDistHist[0];
+    std::vector<double> dhvec = relHeadingHist[0];
+    std::vector<double> dsvec = relSpeedHist[0];
+
+    plt::figure(1);
+    plt::plot(tvec, drvec, "bo-");
+    plt::title("Relative States over Time");
+    plt::xlabel("Time [s]");
+    plt::ylabel("Relative Distance [m]");
+    plt::grid(true);
+    // plt::show();
+
+    plt::figure(2);
+    plt::plot(tvec, dhvec, "ro-");
+    plt::title("Relative Heading over Time");
+    plt::xlabel("Time [s]");
+    plt::ylabel("Relative Heading [UL]");
+    plt::grid(true);
+
+    plt::figure(3);
+    plt::plot(tvec, dsvec, "ko-");
+    plt::title("Relative Speed over Time");
+    plt::xlabel("Time [s]");
+    plt::ylabel("Relative Speed [m/s]");
+    plt::grid(true);
+    plt::show();
+}
+
+TEST_F(IntegrationTests, N2_RepulsionAPF_Test){  
+    // Set Initial Conditions
+    for(uint i = 0; i < numAgents; i++){
+        // Set Position Vector
+        uvec.x() = udUnitVec(rng);
+        uvec.y() = udUnitVec(rng);
+        uvec.z() = udUnitVec(rng);
+        uvec.normalize();
+        rvec = uvec * udRepulsion(rng);
+        // Set Rotation Matrix
+        aa = Eigen::AngleAxisd(udAngle(rng), uvec);
+        quat = Eigen::Quaterniond(aa);
+        dcm = quat.matrix();
+        // Build Pose
+        pose.block<3,3>(0,0) = dcm;
+        pose.block<3,1>(0,3) = rvec;
+        // Add Pose to IC Vector
+        initCond.at(i) = pose;
+    }
+    env.Init(initCond);
+    // Estimate number of simulation steps needed to reach terminal conditions
+    env.ComputeRelativeStates();
+    double timeEst = 1.1 * abs(env.relativePositions[0] - rmin) * vParams.cruiseSpeed;
+    uint const numSteps = (uint)(timeEst/timeStep);
+    // uint const numSteps = 10000;
+    // std::cout << numSteps << std::endl;
+    Eigen::VectorXd timeVec = Eigen::VectorXd::LinSpaced(numSteps,0,timeStep*numSteps);
+    // Initialize Relative State Histories
+    std::vector<std::vector<double>> relDistHist(env.numRelStates,std::vector<double>(numSteps,0));
+    std::vector<std::vector<double>> relSpeedHist(env.numRelStates,std::vector<double>(numSteps,0));
+    std::vector<std::vector<double>> relHeadingHist(env.numRelStates,std::vector<double>(numSteps,0));
+    
+    // Run Simulation
+    for (uint ti = 0; ti < numSteps; ti++){
+        // Simulate Swarm
+        env.Simulate();
+        // Log Relative States
+        env.ComputeRelativeStates();
+        for(uint pi = 0; pi < env.numRelStates; pi++){
+            relDistHist[pi][ti] = env.relativePositions[pi];
+            relSpeedHist[pi][ti] = env.relativeSpeeds[pi];
+            relHeadingHist[pi][ti] = env.relativeHeadings[pi];
+            // Relative distance must always be greater than the wingspan of a single vehicle
+            EXPECT_GT(relDistHist[pi][ti], vParams.wingSpan);
+        }
+    }
+
+    // End of Sim Assertions
+    // Check that relative position, speed, and heading have decreased and are in spec
+    for(uint pi = 0; pi < env.numRelStates; pi++){
+        EXPECT_GT(relDistHist[pi][numSteps-1], relDistHist[pi][0]);
         EXPECT_NEAR(relDistHist[pi][numSteps-1], rmin, rtol);
         EXPECT_NEAR(relSpeedHist[pi][numSteps-1],0,spdtol);
         EXPECT_NEAR(relHeadingHist[pi][numSteps-1], 1 ,htol);
