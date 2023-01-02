@@ -71,7 +71,7 @@ class SwarmAgent : public SimObj {
     uint numAgents;
 
     // Methods
-    void ComputeControlInputs();
+    void ComputeControl();
     void PropagateStates();
     Eigen::Vector2d ComputeAPF(double);
 };

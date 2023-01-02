@@ -25,7 +25,7 @@ SwarmAgent::SwarmAgent(AgentRole role, double tstep, uint numVeh){
 
 // Public Methods
 void SwarmAgent::Simulate(){
-    ComputeControlInputs();
+    ComputeControl();
     PropagateStates();
 }
 
@@ -36,7 +36,7 @@ double SwarmAgent::GetSensingRange(){
 
 
 // Private Methods
-void SwarmAgent::ComputeControlInputs(){
+void SwarmAgent::ComputeControl(){
     // Poll Sensor for Neighboring Agent Pose and Speed
     std::vector<Eigen::Matrix4d> poseData = sensor.GetPoseData();
     std::vector<double> speedData = sensor.GetSpeedData();
