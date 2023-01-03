@@ -21,6 +21,22 @@ Each swarm agent is equipped with one sensor that can measure the pose and speed
 The success of the swarm is judged based on the relative heading, speed, and distance between agents.  If all agents are heading the same direction at the same speed and near a target separation distance all within a specified tolerance, the swarm behavior has been achieved.  If one agent get separated from the group or a collision occurs, the objective is failed.
 
 ## Class Structure:
+The project is broken into the following classes:
+
+* Environment Manager
+  * Basically holds all objects that may exist in the simulation environment.  
+  * Executes the simulation and handles data that needs to be passed between objects.
+  * Computes relative states between agents for logging purposes.
+  * Computes the graph Laplacian which is a way of tracking which agents can communicate or sense each other.
+* Swarm Agent
+  * Represents a UAV in the swarm.  
+  * The primary public method is the Simulate function.  This updates class data in a single simulation step.
+* Sensor
+  * Represents a generic sensor attached to each agent.
+  * Obtains pose and speed data for neighboring agents from the environment for use by the owning agent.
+* SimObj
+  * Abstract Base Class (ABC) for a generic simulation object.  
+  * For now, this only represents a swarm agent, but the intent is to hold all data/functions that may be used by other future objects like obstacles, uncooperative targets, etc.
 
 ## Run Instructions:
 
@@ -43,6 +59,7 @@ The success of the swarm is judged based on the relative heading, speed, and dis
       Satisfied by: The helper functions in SimObj use pass-by-reference to reduce the amount of data copied and/or operate on the referenced data.
 
 ## References: 
+Mills, John. Swarm Coordination Scheme for Fixed-Wing UAVs. Florida Institute of Technology.  Master's Thesis.  2015.
 
 
 ## Dependencies for Running Locally
@@ -58,6 +75,11 @@ Developed and tested on: Linux Ubunto 22.04 (VM)
   * Linux: gcc / g++ is installed by default on most Linux distros
   * Mac: same deal as make - [install Xcode command line tools](https://developer.apple.com/xcode/features/)
   * Windows: recommend using [MinGW](http://www.mingw.org/)
+* Eigen >= 3.4.0
+  * Linux: sudo apt install libeigen3-dev
+  * Mac:  Using Homebrew, run the following command in terminal: brew install eigen
+  * Windows:  Download the desired release from http://eigen.tuxfamily.org.
+              Unzip in the location of your choice, preferrably at C:\ or C:\Program files for better discoverability by CMake find-modules (remember to extract the inner folder and rename it to Eigen3 or Eigen).
 * python3 (w/ numpy and matplotlib) >= 3.0
   * Linux:  sudo apt-get install python3-dev python3-numpy python3-matplotlib
   * Mac: 

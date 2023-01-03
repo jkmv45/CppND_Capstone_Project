@@ -89,6 +89,7 @@ class IntegrationTests : public ::testing::Test{
         double senseRange = vParams.senseRadius;
         std::random_device rd;
         std::mt19937 rng(rd());
+        this->udUnitVec = std::uniform_real_distribution(0.0,1.0);
         this->udAttraction = std::uniform_real_distribution(rmin, senseRange-1.0);
         this->udRepulsion = std::uniform_real_distribution(vParams.wingSpan+1.0, rmin);
         this->udAngle = std::uniform_real_distribution(-0.5*M_PI, 0.5*M_PI);
@@ -432,7 +433,7 @@ TEST_F(IntegrationTests, N2_AttractionAPF_Test){
     env.Init(initCond);
     // Estimate number of simulation steps needed to reach terminal conditions
     env.ComputeRelativeStates();
-    double timeEst = 1.1 * (env.relativePositions[0] - rmin) * vParams.cruiseSpeed;
+    double timeEst = 1.1 * abs(env.relativePositions[0] - rmin) * vParams.cruiseSpeed;
     uint const numSteps = (uint)(timeEst/timeStep);
     Eigen::VectorXd timeVec = Eigen::VectorXd::LinSpaced(numSteps,0,timeStep*numSteps);
     // Initialize Relative State Histories
