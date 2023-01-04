@@ -50,14 +50,18 @@ void SwarmAgent::ComputeControl(){
     uint neighborhoodSize = poseData.size();
     double gain0 = (1/((double)numAgents-1))*(1-(neighborhoodSize/((double)numAgents + 1)));
     // Initialize Control Inputs for Summation over Loop
-    double u1APF, u1CNS, u1DMP, u2APF, u2CNS, u3APF, u3CNS, u4APF, u4CNS = 0;
-    double u1OBJ, u2OBJ, u3OBJ, u4OBJ = 0;
+    double u1APF = 0, u1CNS = 0, u1DMP = 0, u2APF = 0, u2CNS = 0, u3APF = 0, u3CNS = 0, u4APF, u4CNS = 0;
+    double u1OBJ = 0, u2OBJ = 0, u3OBJ = 0, u4OBJ = 0;
     Eigen::Vector2d resAPF = Eigen::Vector2d::Zero();
 
     // Define Pose Related Variables
-    double relSpeed, relDist;
-    Eigen::Vector3d relPos, relPosHat;
-    Eigen::Vector3d tvec, nvec, bvec, tvecj;
+    double relSpeed = 0, relDist = 0;
+    Eigen::Vector3d relPos = {0,0,0}, 
+                    relPosHat = {0,0,0};
+    Eigen::Vector3d tvec  = {1,0,0}, 
+                    nvec  = {0,1,0}, 
+                    bvec  = {0,0,1}, 
+                    tvecj = {1,0,0};
     Eigen::Matrix3d dcmNeighbor;
     Eigen::Matrix3d dcm = GetCurrentAttitude();
     tvec = GetTangentVec(dcm);
@@ -112,6 +116,8 @@ void SwarmAgent::ComputeControl(){
 
     u1DMP = -1.0 * ctrlParams.damping * (fwdSpd - vehParams.cruiseSpeed);
     
+    // std::cout << "Gain0: " << gain0 << " u1APF: " << u1APF << " u2APF: " << u2APF << " u3APF: " << u3APF << " u4APF: " << u4APF << " u1CNS: " << u1CNS << " u2CNS: " << u2CNS << " u3CNS: " << u3CNS << " u4CNS: " << u4CNS << " uDMP: " << u1DMP << std::endl;
+    
     double u1, u2, u3, u4 = 0;
     if (myRole == AgentRole::leader){
         // TODO: Define Wapypoint Control Logic
@@ -133,8 +139,14 @@ void SwarmAgent::PropagateStates(){
     Eigen::Vector3d lastHeading = GetTangentVec(attitude);
     Eigen::Vector3d position = GetCurrentPosition();
     // Setup Integration Variables
-    Eigen::Vector3d k1pos, k2pos, k3pos, k4pos;
-    Eigen::Matrix3d k1att, k2att, k3att, k4att;
+    Eigen::Vector3d k1pos = {0,0,0}, 
+                    k2pos = {0,0,0}, 
+                    k3pos = {0,0,0}, 
+                    k4pos = {0,0,0};
+    Eigen::Matrix3d k1att = Eigen::Matrix3d::Identity(), 
+                    k2att = Eigen::Matrix3d::Identity(), 
+                    k3att = Eigen::Matrix3d::Identity(), 
+                    k4att = Eigen::Matrix3d::Identity();
     double deltaSpeed, nextSpeed;
     // Get Angular Velocity as Skew Symmetric Matrix
     angVel = inputU.block<3,1>(1,0);
@@ -165,7 +177,7 @@ void SwarmAgent::PropagateStates(){
 }
 
 Eigen::Vector2d SwarmAgent::ComputeAPF(double rrel){
-    double g, gIntegral = 0;
+    double g = 0, gIntegral = 0;
     double exponent = (rrel - vehParams.wingSpan)*(rrel - vehParams.wingSpan) / ctrlParams.cAPF;
     // Compute APF Function Value for Control
     g = rrel * (ctrlParams.aAPF - ctrlParams.bAPF * exp(-1.0 * exponent ));

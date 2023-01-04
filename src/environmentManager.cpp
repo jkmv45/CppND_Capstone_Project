@@ -47,8 +47,12 @@ void EnvironmentManager::Simulate(){
 
 void EnvironmentManager::ComputeRelativeStates(){
     uint p = 0; // This index keeps track of the relative state we are updating
-    Eigen::Vector3d a1Heading, a2Heading = Eigen::Vector3d::Zero();
-    Eigen::Matrix3d a1Att, a2Att = Eigen::Matrix3d::Identity();
+    Eigen::Vector3d a1Heading, a2Heading;
+    a1Heading = Eigen::Vector3d::Zero();
+    a2Heading = Eigen::Vector3d::Zero();
+    Eigen::Matrix3d a1Att, a2Att;
+    a1Att = Eigen::Matrix3d::Identity();
+    a2Att = Eigen::Matrix3d::Identity();
     for(uint j = 0; j < numAgents; j++){
         for(uint k = 0; k < numAgents; k++){
             if(k > j) {
