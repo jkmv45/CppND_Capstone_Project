@@ -55,7 +55,6 @@ int main() {
     // Simulation Setup
     double timeStep = 0.01;
     EnvironmentManager env = EnvironmentManager(numAgents, timeStep);
-    // TODO: make this better
     VehicleParams vParams = VehicleParams();
     ControlParams cParams = ControlParams();
     rmin = vParams.wingSpan * cParams.eAPF;
@@ -96,8 +95,6 @@ int main() {
         pose.block<3,1>(0,3) = rvec;
         // Add Pose to IC Vector
         initCond.at(i) = pose;
-        // std::cout << "Pose for agent " << i+1 << " has been defined as: " << std::endl;
-        // std::cout << pose << std::endl;
     }
     env.Init(initCond);
     std::cout << "Initial Conditions have been set" << std::endl;
@@ -110,7 +107,10 @@ int main() {
             maxDist = env.relativePositions[pi];
         }
     }
-    double timeEst = 1.1 * abs(maxDist - rmin) * vParams.cruiseSpeed;
+
+    // The magic number here is not ideal, but I'm not sure of a better way right now to estimate the time required to achieve swarm behavior based on random initial conditions.
+    // This factor should be plenty without taking too long to simulate. 
+    double timeEst = 20.0 * abs(maxDist - rmin) / vParams.cruiseSpeed;
     uint const numSteps = (uint)(timeEst/timeStep);
     Eigen::VectorXd timeVec = Eigen::VectorXd::LinSpaced(numSteps,0,timeStep*numSteps);
     std::cout << "\nSimulation time duration is (~): " << (int)timeEst << " seconds\n" << std::endl;
@@ -139,10 +139,10 @@ int main() {
                 collisionChk = false;
             }
         }
-        // Report status to user
+        // Report completion status to user
         if (ti%10 == 0){ // to limit the number of cout calls
             percentComplete = 100*(ti/(double)numSteps) + 1;
-            std::cout << std::setw(3) << percentComplete << "%\b\b\b\b"; // I did this to make the cursor behavior more consistent
+            std::cout << std::setw(3) << percentComplete << "%\b\b\b\b"; // I did this to make the cursor to stay still when updating the percentage
         }
     }
 
@@ -152,7 +152,7 @@ int main() {
     headCons = true;
     speedCons = true;
     for(uint pi = 0; pi < env.numRelStates; pi++){
-        cohesionChk = cohesionChk && (abs(relDistHist[pi][numSteps-1] - rmin) < abs(relDistHist[pi][0]- rmin));
+        cohesionChk = cohesionChk && (abs(relDistHist[pi][numSteps-1] - rmin) < abs(relDistHist[pi][0] - rmin));        
         posCons = posCons || (abs(relDistHist[pi][numSteps-1] - rmin) < rtol); // Note the OR condition.  This is intentional.  See comment above.
         headCons = headCons && (abs(relHeadingHist[pi][numSteps-1] - 1.0) < htol);
         speedCons = speedCons && (abs(relSpeedHist[pi][numSteps-1]) < spdtol);

@@ -1,13 +1,11 @@
 Minumum
-* Add error response to inconsistent sensor data 
-* Add doxygen doc strings
-* Create tester for ComputeAPF
-* Update README
-* Create function to compute Lyapnunov function value each cycle
-* Add a CLI for getting number of agents from user (give at least 3 options)
-* Finish main.cpp
+x * Add error response to inconsistent sensor data 
+x * Add doxygen doc strings
+x * Update README
+x * Add a CLI for getting number of agents from user (give at least 3 options)
+x * Finish main.cpp
 
-Cleanup
+Possible Cleanup
 * Make helper functions in SimObj their own class
 * Look at separating tester file into separate files for each class
 
@@ -18,5 +16,5 @@ Future Work
 * Add leader logic 
 * Switch plotting tool to GNUplot
 * Make simulation multi-threaded to see how it behaves in an asynchronous architecture
-
-
+* Create function to compute Lyapnunov function value each cycle
+* Create tester for ComputeAPF

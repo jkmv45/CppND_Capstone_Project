@@ -1,11 +1,20 @@
 #include "environmentManager.hpp"
 
-// Constructor
+// *************************************** Constructor ***************************************
+/**
+ * @brief Construct a new Environment Manager:: Environment Manager object
+ * 
+ * @param swarmSize Number of vehicles (a.k.a agents) in the swarm to be simulated
+ * @param timeStep  Time step of the simulation.  This is used to create the agents so they can integrate their states.
+ */
 EnvironmentManager::EnvironmentManager(uint swarmSize, double timeStep){
     // Set size of variables based on number of agents
     this -> numAgents = swarmSize;                  
     this -> laplacian.resize(numAgents,numAgents);  
     this -> agentList.resize(numAgents);
+    // Calculate the number of relative states and resize vectors
+    // The equation below is 1/2 * N^2 - N. Think of the relationships between agents depicted as an NxN matrix. The diagonal represents an agent relative to itself (not useful).
+    // N^2 is the total # of pairs so subtracting N removes the diagonal leaving the upper and lower triangles.  We only need one since the other is the opposite polarity of the first. So we divide by 2.
     this -> numRelStates = 0.5*(numAgents-1)*numAgents;
     this -> relativePositions.resize(numRelStates);
     this -> relativeSpeeds.resize(numRelStates);
@@ -16,11 +25,15 @@ EnvironmentManager::EnvironmentManager(uint swarmSize, double timeStep){
     }
 }
 
-// Public Methods
+// *************************************** Public Methods ***************************************
+/**
+ * @brief Set the initial conditions of each swarm agent.  An error will occur if the input vector size is not equal to the number of agents.
+ * 
+ * @param initCond A STL vector of 4x4 Eigen matrices that represent the initial pose of each swarm agent.  Each must belong to the mathematical group SE(3), or in other words, the upper 3x3 must have a determinant of 1.
+ */
 void EnvironmentManager::Init(std::vector<Eigen::Matrix4d> initCond){
     if (initCond.size() != numAgents){
         // Error, initial conditions must be same size as number of agents.
-        // TODO: Create error status update
         std::cout << "Error: Not all agents have initial conditions. Input Size: " << initCond.size() << " Swarm Size: " << numAgents << std::endl;
         return;
     }
@@ -29,22 +42,22 @@ void EnvironmentManager::Init(std::vector<Eigen::Matrix4d> initCond){
     }
 }
 
+/**
+ * @brief Simulate all swarm agents managed by this object.  The Laplacian is computed first to establish the network graph.  Then each sensor and agent are simulated one after another.
+ * 
+ */
 void EnvironmentManager::Simulate(){
     ComputeLaplacian();
     for(uint ai = 0; ai < numAgents; ai++){
         SimulateSensor(ai);
         agentList[ai].Simulate();
-        // std::cout << " Pose of Agent: " << ai << std::endl;
-        // std::cout << agentList[ai].GetCurrentPose() << std::endl;
-        // std::cout << std::endl;
-        // std::cout << "Position of Agent: " << ai+1 << " : " <<  agentList[ai].GetCurrentPosition().norm() << std::endl;
-        // std::cout << "Speed of Agent: " << ai+1 << " : " <<  agentList[ai].GetCurrentSpeed() << std::endl;
-
-        // Compute Lyapunov
-        // Log Data
     }
 }
 
+/**
+ * @brief Compute the relative distances, speeds, and heading metric between each pair of swarm agents.  For this simulation, relative heading is computed as the dot product between the tangent vectors of each agent.
+ * 
+ */
 void EnvironmentManager::ComputeRelativeStates(){
     uint p = 0; // This index keeps track of the relative state we are updating
     Eigen::Vector3d a1Heading, a2Heading;
@@ -63,13 +76,19 @@ void EnvironmentManager::ComputeRelativeStates(){
                 a1Heading = agentList[j].GetTangentVec(a1Att);
                 a2Heading = agentList[k].GetTangentVec(a2Att);
                 relativeHeadings[p] = abs(a1Heading.dot(a2Heading));
-                // TODO: Add relative "roll" (may not be needed)
                 p++;
             }
         }
     }
 }
 
+/**
+ * @brief Simulate the sensor of the chosen agent. The graph Laplacian is used to determine who is in each agents "neighborhood" (a.k.a. sensing range).  
+ *        This function will store the pose and speed of all agents in the chosen agents neighborhood and pass this data to its sensor. 
+ *        This architecture is chosen to emulate a the way these objects would exist in the real application from an abstracted level. 
+ * 
+ * @param agentIdx Index of the chosen agent
+ */
 void EnvironmentManager::SimulateSensor(uint agentIdx){
     std::vector<Eigen::Matrix4d> poseData;
     std::vector<double> speedData;
@@ -93,6 +112,15 @@ void EnvironmentManager::SimulateSensor(uint agentIdx){
     agentList[agentIdx].sensor.SetSensorData(poseData,speedData);
 }
 
+/**
+ * @brief Compute the Graph Laplacian of the swarm network.  The Laplacian is a mathematical object in graph theory that represents "edges" connecting each "vertex" in a graph.
+ *        In our application, nodes are the agents, and edges are the sensing/communication link between agents.  The Laplacian can be decomposed into the difference of two matrices: the degree matrix and the adjacency matrix.
+ *        The degree matrix is a diagonal matrix where each entry is the number of agents that share an edge with the agent at the given index (i.e. the neighborhood size).
+ *        The adjacency matrix is a symmetric matrix where each entry {a_ij} is 1 if the two agents share an edge and 0 otherwise.
+ *        The Laplacian matrix is the difference between the degree and adjacency matrix: {L = D - A}.
+ * 
+ * @return Eigen::MatrixXi The Laplacian Matrix which is an NxN matrix where N is the number of agents in the swarm.
+ */
 Eigen::MatrixXi EnvironmentManager::ComputeLaplacian(){
     Eigen::MatrixXi degMat, adjMat;
     degMat.resize(numAgents,numAgents);
@@ -122,5 +150,26 @@ Eigen::MatrixXi EnvironmentManager::ComputeLaplacian(){
     return laplacian;
 }
 
-// Getters
-std::vector<SwarmAgent>* EnvironmentManager::GetAgentList(){ return &agentList; }
+// *************************************** Getters ***************************************
+/**
+ * @brief Return the size of the agent list managed by this object.  NOTE: Primarily for test code.
+ * 
+ * @return uint Size of the vector of agents
+ */
+uint EnvironmentManager::GetAgentListSize(){ return agentList.size(); }
+
+/**
+ * @brief Get the pose of a specified agent.  NOTE: Primarily for test code.
+ * 
+ * @param idx Index of the chosen agent.
+ * @return Eigen::Matrix4d Pose of the chosen agent.
+ */
+Eigen::Matrix4d EnvironmentManager::GetAgentPose(uint idx){ return agentList.at(idx).GetCurrentPose(); }
+
+/**
+ * @brief Get the pose data stored in the sensor of the specified agent. NOTE: Primarily for test code.
+ * 
+ * @param idx Index of the chosen agent.
+ * @return std::vector<Eigen::Matrix4d> The STL vector of poses stored in the sensor.
+ */
+std::vector<Eigen::Matrix4d> EnvironmentManager::GetSensorData(uint idx){ return agentList.at(idx).sensor.GetPoseData(); };

@@ -1,3 +1,15 @@
+/**
+ * @file swarmAgent.hpp
+ * @author John Mills (jkmv45@gmail.com)
+ * @brief Represents a UAV in the swarm. The primary public method is the Simulate function.  This updates class data in a single simulation step.
+ *        Structures for the vehical parameters and control parameters are also defined here.
+ *        Swarm Agent inherits from SimObjABC.
+ * @version 0.1
+ * @date 2023-01-05
+ * 
+ * @copyright Copyright (c) 2023
+ * 
+ */
 #pragma once
 
 #include <cmath>
@@ -47,7 +59,6 @@ enum AgentRole {leader,follower};
 class SwarmAgent : public SimObj {
     public:
     // Attributes
-    double dt;          // Sample Time [s]
     double jFlock;      // Potential Energy related to Flocking (for Lyapunov Fcn computation)
     AgentRole myRole;   // This agents role in the swarm (leader or follower) ***(Future upgrade)***
     Sensor sensor;      // Agent's sensor for nearby agent's pose and speed
@@ -62,12 +73,9 @@ class SwarmAgent : public SimObj {
 
     private:
     // Attributes
-    // Structs
     VehicleParams vehParams;
     ControlParams ctrlParams;
-    // Vectors
-    Eigen::Vector4d inputU;     // Control input vector for agent controller
-    // Scalars
+    Eigen::Vector4d outputY;
     uint numAgents;
 
     // Methods

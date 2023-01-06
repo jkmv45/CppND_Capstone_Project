@@ -27,9 +27,6 @@ class SwarmAgentTest : public ::testing::Test{
         this -> cParams = ControlParams();
     }
 
-    // void TearDown() override {}
-
-    // EnvironmentManager env;
     SwarmAgent agent1;
     SwarmAgent agent2;
     Eigen::Matrix3d testDCM;
@@ -43,14 +40,14 @@ class EnvironmentTest : public ::testing::Test{
         this -> numAgents = 3;
         double timeStep = 0.01;
         this -> env = EnvironmentManager(numAgents, timeStep);
-        this -> mySwarmPtr = env.GetAgentList();
         this -> v1 = {1, 2, 3};
         this -> v2 = v1;
         this -> v3 = v1;
         this -> t1 = Eigen::Matrix4d::Identity(); 
         this -> t2 = Eigen::Matrix4d::Identity();
         this -> t3 = Eigen::Matrix4d::Identity(); 
-        double senseRange = mySwarmPtr->at(0).GetSensingRange();
+        VehicleParams vp = VehicleParams();
+        double senseRange = vp.senseRadius;
 
         // Setup RNG
         this -> udInside = std::uniform_real_distribution(0.5*senseRange+1.0, senseRange-1.0);
@@ -59,7 +56,6 @@ class EnvironmentTest : public ::testing::Test{
 
     EnvironmentManager env;
     uint numAgents;
-    std::vector<SwarmAgent>* mySwarmPtr;
     std::vector<Eigen::Matrix4d> initCond;
     Eigen::Vector3d v1;
     Eigen::Vector3d v2;
@@ -80,7 +76,6 @@ class IntegrationTests : public ::testing::Test{
         this -> timeStep = 0.01;
         // Simulation Setup
         env = EnvironmentManager(numAgents, timeStep);
-        this -> mySwarmPtr = env.GetAgentList();
         this -> vParams = VehicleParams();
         this -> cParams = ControlParams();
         this -> rmin = vParams.wingSpan * cParams.eAPF;
@@ -103,15 +98,12 @@ class IntegrationTests : public ::testing::Test{
         this -> initCond.resize(numAgents);
     }
 
-    // void TearDown() override {}
-
     // Simulation Variables
     uint numAgents;
     double timeStep;
     VehicleParams vParams;
     ControlParams cParams;
     EnvironmentManager env;
-    std::vector<SwarmAgent>* mySwarmPtr;
     std::vector<Eigen::Matrix4d> initCond;
 
     Eigen::Vector3d rvec, uvec;
@@ -134,6 +126,7 @@ class IntegrationTests : public ::testing::Test{
     std::uniform_real_distribution<double> udRepulsion;
     std::uniform_real_distribution<double> udAngle;
 };
+
 
 // *************************************** Test Suite Definitions **************************************
 
@@ -201,7 +194,6 @@ TEST_F(SwarmAgentTest, GetBinormalTest){
 }
 
 TEST_F(SwarmAgentTest, NormalizationTest){
-    // std::cout << "Finish me!!!!" << std::endl;
     Eigen::Matrix3d testDCM;
     // Perfect dcm
     Eigen::AngleAxisd aa = Eigen::AngleAxisd(0.25*M_PI, Eigen::Vector3d::UnitZ());
@@ -286,7 +278,7 @@ TEST(SensorTest, StatusFlagTest){
 // ***************************************** Environment Tests *****************************************
 // *****************************************************************************************************
 TEST_F(EnvironmentTest, ConstructorTest){
-    EXPECT_EQ(env.numAgents, env.GetAgentList()->size());
+    EXPECT_EQ(env.numAgents, env.GetAgentListSize());
     EXPECT_EQ(env.numAgents, numAgents);
 }
 
@@ -307,9 +299,9 @@ TEST_F(EnvironmentTest, InitValidTest){
 
     env.Init(ic);
 
-    EXPECT_EQ(mySwarmPtr->at(0).GetCurrentPose(),t1);
-    EXPECT_EQ(mySwarmPtr->at(1).GetCurrentPose(),t2);
-    EXPECT_EQ(mySwarmPtr->at(2).GetCurrentPose(),t3);
+    EXPECT_EQ(env.GetAgentPose(0),t1);
+    EXPECT_EQ(env.GetAgentPose(1),t2);
+    EXPECT_EQ(env.GetAgentPose(2),t3);
 }
 
 TEST_F(EnvironmentTest, InitInvalidTest){
@@ -326,8 +318,8 @@ TEST_F(EnvironmentTest, InitInvalidTest){
 
     env.Init(ic);
 
-    EXPECT_NE(mySwarmPtr->at(0).GetCurrentPose(),t1);
-    EXPECT_NE(mySwarmPtr->at(1).GetCurrentPose(),t2);
+    EXPECT_NE(env.GetAgentPose(0),t1);
+    EXPECT_NE(env.GetAgentPose(1),t2);
 }
 
 TEST_F(EnvironmentTest, ConnectedGraphTest){
@@ -360,9 +352,9 @@ TEST_F(EnvironmentTest, ConnectedGraphTest){
     env.SimulateSensor(0);
     env.SimulateSensor(1);
     env.SimulateSensor(2);
-    std::vector<Eigen::Matrix4d> pose1 = mySwarmPtr->at(0).sensor.GetPoseData();
-    std::vector<Eigen::Matrix4d> pose2 = mySwarmPtr->at(1).sensor.GetPoseData();
-    std::vector<Eigen::Matrix4d> pose3 = mySwarmPtr->at(2).sensor.GetPoseData();
+    std::vector<Eigen::Matrix4d> pose1 = env.GetSensorData(0);
+    std::vector<Eigen::Matrix4d> pose2 = env.GetSensorData(1);
+    std::vector<Eigen::Matrix4d> pose3 = env.GetSensorData(2);
 
     EXPECT_EQ(pose1.size(),1);
     EXPECT_EQ(pose2.size(),2);
@@ -399,9 +391,9 @@ TEST_F(EnvironmentTest, DisconnectedGraphTest){
     env.SimulateSensor(0);
     env.SimulateSensor(1);
     env.SimulateSensor(2);
-    std::vector<Eigen::Matrix4d> pose1 = mySwarmPtr->at(0).sensor.GetPoseData();
-    std::vector<Eigen::Matrix4d> pose2 = mySwarmPtr->at(1).sensor.GetPoseData();
-    std::vector<Eigen::Matrix4d> pose3 = mySwarmPtr->at(2).sensor.GetPoseData();
+    std::vector<Eigen::Matrix4d> pose1 = env.GetSensorData(0);
+    std::vector<Eigen::Matrix4d> pose2 = env.GetSensorData(1);
+    std::vector<Eigen::Matrix4d> pose3 = env.GetSensorData(2);
 
     EXPECT_EQ(pose1.size(),0);
     EXPECT_EQ(pose2.size(),0);
@@ -433,7 +425,7 @@ TEST_F(IntegrationTests, N2_AttractionAPF_Test){
     env.Init(initCond);
     // Estimate number of simulation steps needed to reach terminal conditions
     env.ComputeRelativeStates();
-    double timeEst = 1.1 * abs(env.relativePositions[0] - rmin) * vParams.cruiseSpeed;
+    double timeEst = 20.0* abs(env.relativePositions[0] - rmin) / vParams.cruiseSpeed;
     uint const numSteps = (uint)(timeEst/timeStep);
     Eigen::VectorXd timeVec = Eigen::VectorXd::LinSpaced(numSteps,0,timeStep*numSteps);
     // Initialize Relative State Histories
@@ -480,7 +472,6 @@ TEST_F(IntegrationTests, N2_AttractionAPF_Test){
     plt::xlabel("Time [s]");
     plt::ylabel("Relative Distance [m]");
     plt::grid(true);
-    // plt::show();
 
     plt::figure(2);
     plt::plot(tvec, dhvec, "ro-");
@@ -520,10 +511,8 @@ TEST_F(IntegrationTests, N2_RepulsionAPF_Test){
     env.Init(initCond);
     // Estimate number of simulation steps needed to reach terminal conditions
     env.ComputeRelativeStates();
-    double timeEst = 1.1 * abs(env.relativePositions[0] - rmin) * vParams.cruiseSpeed;
+    double timeEst = 100.0 * abs(env.relativePositions[0] - rmin) / vParams.cruiseSpeed;
     uint const numSteps = (uint)(timeEst/timeStep);
-    // uint const numSteps = 10000;
-    // std::cout << numSteps << std::endl;
     Eigen::VectorXd timeVec = Eigen::VectorXd::LinSpaced(numSteps,0,timeStep*numSteps);
     // Initialize Relative State Histories
     std::vector<std::vector<double>> relDistHist(env.numRelStates,std::vector<double>(numSteps,0));
@@ -569,7 +558,6 @@ TEST_F(IntegrationTests, N2_RepulsionAPF_Test){
     plt::xlabel("Time [s]");
     plt::ylabel("Relative Distance [m]");
     plt::grid(true);
-    // plt::show();
 
     plt::figure(2);
     plt::plot(tvec, dhvec, "ro-");
