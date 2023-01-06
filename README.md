@@ -128,12 +128,12 @@ Developed and tested on: Linux Ubunto 22.04 (VM)
   * Mac: same deal as make - [install Xcode command line tools](https://developer.apple.com/xcode/features/)
   * Windows: recommend using [MinGW](http://www.mingw.org/)
 * Eigen >= 3.4.0
-  * Linux: sudo apt install libeigen3-dev
+  * Linux: `sudo apt install libeigen3-dev`
   * Mac:  Using Homebrew, run the following command in terminal: brew install eigen
   * Windows:  Download the desired release from http://eigen.tuxfamily.org.
               Unzip in the location of your choice, preferrably at C:\ or C:\Program files for better discoverability by CMake find-modules (remember to extract the inner folder and rename it to Eigen3 or Eigen).
 * python3 (w/ numpy and matplotlib) >= 3.0
-  * Linux:  sudo apt-get install python3-dev python3-numpy python3-matplotlib
+  * Linux:  `sudo apt-get install python3-dev python3-numpy python3-matplotlib`
   * Windows/Mac: [click here for installation instructions](https://realpython.com/installing-python/)
 * matplotlibcpp
   * This package will be fetched by cmake if not found locally
